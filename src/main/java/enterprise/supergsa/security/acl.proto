@@ -1,0 +1,283 @@
+// Copyright 2018 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax="proto2";
+
+package enterprise.supergsa.security;
+
+option java_package = "com.google.enterprise.supergsa.security";
+option java_outer_classname = "AclProto";
+option java_multiple_files = true;
+
+// The main set of protocol buffers needed by the GSA indexing and serving code.
+// These messages effectively wrap those found in security/acl/acl.proto, but
+// also contain GSA-specific messages more suitable for our use.
+
+// Enum to capture the application of an ACL to a URL and a set of usernames
+// and/or groupnames and the results of that application.  Semantics should
+// match those found in the security manager under
+// java/com/google/enterprise/secmgr.
+enum Decision {
+  // Indicates that no decision is made; ie, that the ACLs have not been applied
+  // to the URL.
+  NONE = 0;
+
+  // User is permitted to view that URL.
+  PERMIT = 1;
+
+  // User is NOT permitted to view that URL.
+  DENY = 2;
+
+  // Application of the ACL produced no decision.  Currently this only happens
+  // if there are no ACLs present for an entire inheritance chain of ACLs.
+  INDETERMINATE = 3;
+}
+
+// Information about the domain associated with the principal.
+message Domain {
+  enum DomainType {
+    // Domain type used by most windows / active directory deployments.
+    NETBIOS = 0;
+
+    // Sometimes used in usernames in kerberos.
+    DNS = 1;
+
+    // Used to indicate that domain should be dropped and no processing should
+    // be done to recover it.  Currently, this marks principals representing
+    // SharePoint local groups, with the effect of disabling domain parsing.
+    UNQUALIFIED = 99;
+  }
+  required string name = 1;
+  required DomainType type = 2 [default = NETBIOS];
+}
+
+// Information that fully specifies the user/group in the ACL.
+message AclPrincipal {
+  enum SCOPE {
+    USER = 1;
+    GROUP = 2;
+  }
+
+  enum CaseSensitivity {
+    // All strings in AclPrincipal and its sub-messages are treated as
+    // case-sensitive.
+    EVERYTHING_CASE_SENSITIVE = 0;
+
+    // All strings in AclPrincipal and its sub-messages are treated as
+    // case-insensitive.
+    EVERYTHING_CASE_INSENSITIVE = 1;
+  }
+
+  required SCOPE scope = 1;
+  required string name = 2;
+  optional string name_space = 3;
+  optional Domain domain = 4;
+  required CaseSensitivity case_sensitive = 5 [default = EVERYTHING_CASE_SENSITIVE];
+}
+
+// A collection of users and groups with a principal identifying the name of the
+// group.
+message AclGroup {
+  // Although not enforced by this definition, the condition
+  // 'principal.scope() == AclPrincipal.GROUP' should always be true in practice.
+  optional AclPrincipal principal = 1;
+
+  // Note that users and groups are mushed together here.
+  repeated AclPrincipal members = 2;
+  
+  // From which datasource the groups come from.
+  optional string source = 3;
+}
+
+message AclGroups {
+  repeated AclGroup membership = 1;
+}
+
+// We are using a new proto buffer for parsing because with xml2proto
+// library, for data not defined in the attribute, they will be parsed in
+// c-data. This means we either have to modify current feed in xml format
+// for the AclPrincipal or we need new proto buffer for parsing, then
+// it will be converted to the AclPrincipal proto in the end. The first
+// option is rejected by the adapter team, we use the second option.
+message XMLGroups {
+  repeated GroupMembership membership = 1;
+}
+
+message GroupMembership {
+  optional GroupPrincipal principal = 1;
+  optional GroupMembers members = 2;
+}
+
+message GroupMembers {
+  repeated GroupPrincipal principal = 1;
+}
+
+message GroupPrincipal {
+  enum Scope {
+    USER = 1;
+    GROUP = 2;
+  }
+  enum CaseSensitivity {
+    EVERYTHING_CASE_SENSITIVE = 0;
+    EVERYTHING_CASE_INSENSITIVE = 1;
+  }
+  required Scope scope = 1;
+  required string cdata = 2;
+  optional string namespace = 3 [default = "Default"];
+  optional CaseSensitivity case_sensitivity_type = 4 [default = EVERYTHING_CASE_SENSITIVE];
+}
+
+// Simple wrapper to serialize all the ACL principals with a given identity in
+// the security manager.
+message AclPrincipals {
+  repeated AclPrincipal principals = 1;
+}
+
+message GsaEntry {
+  enum ACCESS {
+    PERMIT = 1;
+    DENY   = 2;
+  }
+
+  // DO NOT USE 1, 3, or 4: these refer to deprecated fields.
+  required ACCESS access = 2;
+  required AclPrincipal principal = 5;
+}
+
+// Wrap the two types of acl objects so it's possible to use both the
+// google-wide acl Entry and our own GsaEntry.
+message GsaAclEntry {
+  optional GsaEntry gsa_entry = 1;
+}
+
+message AclInheritance {
+  enum InheritanceType {
+    CHILD_OVERRIDES = 1;
+    PARENT_OVERRIDES = 2;
+    AND_BOTH_PERMIT = 3;
+    // Appropriate only on leaf nodes of inheritance trees,
+    // i.e. files.
+    LEAF_NODE = 99;
+  }
+
+  // An inheritance chain is either well-formed (status CHAIN_OK), or is
+  // incorrectly constructed due to one of several conditions. If this is
+  // updated, make sure to update the corresponding Admin Console text in
+  // ContentStatus.gxp.
+  enum ChainStatus {
+    CHAIN_OK = 1;
+    CHAIN_HAS_CYCLE = 2;
+    INHERITANCE_DATA_MISSING = 3;
+    INVALID_INHERITANCE_TYPE = 4;
+    LOCAL_ID_LOOKUP_FAILURE = 5;
+  }
+
+  // A designation of a resource (e.g. a URL) to inherit ACLs from.
+  // if absent, we interpret the node as root of inheritance tree.
+  optional string inherit_from = 1;
+  required InheritanceType type = 2 [default = LEAF_NODE];
+  // For clients that are interested in the actual parent acl, not just
+  // its resource name.  Should be computed from *inherit_from*.
+  optional GsaAcl parent_acl = 3;
+  optional ChainStatus status = 4;
+}
+
+message AclMetadata {
+  // Result of applying ACL to a particular identity.  In cases where this is
+  // set, the context should appropriately define which identity the decision
+  // applies to.
+  optional Decision decision = 1 [default = NONE];
+  optional AclInheritance inheritance = 2;
+}
+
+
+// An ACL that corresponds to all access restrictions on one document.  Note
+// that this may comprise of several AclEntries which may correspond to different
+// namespaces, or to different roles (permit, deny, etc).
+message GsaAcl {
+  repeated GsaAclEntry entries = 1;
+  optional AclMetadata metadata = 2;
+}
+
+// We'll need an Acl for every URL returned in a GenericSearchResponse, but
+// the MessageSet mechanism allows only one protocol buffer type to be added,
+// so we need this list in order to have an Acl message for each URL.
+message AclList {
+  repeated GsaAcl acls = 1;
+}
+
+// URL pattern and ACL pair used as the base data type in the PolicyACL
+// feature.
+message PolicyAcl {
+  optional string pattern = 1;
+  optional GsaAcl acl = 2;
+}
+
+// Introduced for serialization of a list of PolicyAcls.
+message PolicyAcls {
+  repeated PolicyAcl acls = 1;
+}
+
+// Ecapsulation of session id and strings, serialized with an AclSerializer,
+// related to that session id.
+message Session {
+  optional string session_id = 1;
+  optional string serialized_permit_session = 2;
+  optional string serialized_deny_session = 3;
+
+  // In the future, this will contain the protobuffer of all session
+  // info about the session as contained in the session manager, but that
+  // information is incomplete/undefined currently.
+}
+
+// Enum which directs how ACLs should be processed by the index server.
+enum FilterMethod {
+  // Apply the ACLs to the session data and tag the result in the index
+  // results.  This is applicable if per-URL ACLs are not the first mechanism
+  // in the flex authz routing table if flex authz is enabled, or if policy
+  // ACLs should be applied before per-URL ACLs if not using flex authz.
+  TAG_RESULT_ONLY = 1;
+
+  // Apply the ACLs to the session data, and remove results with DENY decision
+  // from the set returned to the superroot (ent_multiroot).  This and
+  // AUTHORITATIVE enable the possibility of filtering documents before
+  // scoring is done.
+  DROP_DENY = 2;
+
+  // Apply the ACLs to the session data, and treat the results from the ACL
+  // decision as authoritative.  This corresponds to the use case where
+  // per-URL ACLs are the first mechanism in the flex authz table and early-
+  // plus late-binding security is not enabled.
+  AUTHORITATIVE = 3;
+
+  // Do not apply the ACLs to the session data.  Instead, return them in the
+  // IndexResults to be processed by the security manager.
+  // This corresponds to behavior backwards-compatible with versions
+  // 6.8 through 6.14 of the GSA.
+  NO_FILTERING = 4;
+}
+
+// Message to pass in options regarding how ACLs should be processed during
+// serving.
+message AclProcessingOptions {
+  // Session information associated with the ACL request.
+  optional Session session = 1;
+  optional FilterMethod filter_method = 2 [default = NO_FILTERING];
+
+  // If false, do not filter ACLs with the DocinfoRequest part of the query.
+  // This is to prevent ACL filtering from being done twice for a generic search
+  // query.  For DocInfo-specific queries (cache:, link:, info:, related:), this
+  // parameter MUST be true to correctly enforce security.
+  optional bool filter_docinfo_request = 3 [default = true];
+}

@@ -1,0 +1,55 @@
+// Copyright 2018 Google Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// Defines the configuration rules for content server access deny response.
+
+syntax = "proto2";
+
+option java_package = "com.google.enterprise.secmgr.http";
+option java_outer_classname = "DenyRuleProto";
+option java_multiple_files = true;
+
+package conf;
+
+// We send a request to the remote server on the user's behalf to determine if the
+// user is authorized for the access.
+// This proto defines what kind of request we are going to send, and what response
+// is considered to be access deny.
+message DenyRule {
+  enum TYPE {
+    HEAD = 0;
+    GET  = 1;
+  }
+
+  message Header {
+    required string name = 1;   // name of the header
+    required string value = 2;  // value of the header that means access deny
+  }
+
+  // Do a HEAD or GET
+  required TYPE request_type = 1;
+
+  // How much content to get from remote server.
+  // -1 means getting the entire content.
+  // otherwise need to be a positive number representing the max content length to get.
+  optional int32 length = 2;   // [default=0]
+
+  repeated int32 status_code = 3;   // [default=401]
+
+  repeated Header header = 4;
+
+  // Any response containing the following content will be interpreted as access deny.
+  // By default response code of 401 is considered access deny.
+  repeated string content = 5; // [default=""]
+}
