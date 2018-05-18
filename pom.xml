@@ -19,43 +19,29 @@
   </properties>
 
   <build>
+    <extensions>
+      <!-- OS Detection for protoc compiler artifact resolution -->
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.5.0.Final</version>
+      </extension>
+    </extensions>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.8</version>
-        <dependencies>
-            <dependency>
-                <groupId>ant-contrib</groupId>
-                <artifactId>ant-contrib</artifactId>
-                <version>20020829</version>
-            </dependency>
-        </dependencies>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <version>0.5.1</version>
+        <extensions>true</extensions>
         <executions>
           <execution>
-            <id>check-protoc</id>
-            <phase>validate</phase>
-            <configuration>
-              <target>
-                <taskdef resource="net/sf/antcontrib/antcontrib.properties"/>
-                <if>
-                 <available file="protoc" filepath="${env.PATH}"/>
-                 <then>
-                 </then>
-                 <else>
-                  <echo message="!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" level="error"/>
-                  <echo message="!!    Invalid setup:                                                                             !!" level="error"/>
-                  <echo message="!!    Cannot find the protoc command. Please install protocol buffer compiler.                   !!" level="error"/>
-                  <echo message="!!    More info on protocol buffers: https://github.com/google/protobuf/blob/master/README.md    !!" level="error"/>
-                  <echo message="!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" level="error"/>
-                  <fail/>
-                 </else>
-                </if>
-              </target>
-            </configuration>
             <goals>
-              <goal>run</goal>
+              <goal>compile</goal>
+              <goal>test-compile</goal>
             </goals>
+            <configuration>
+              <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -75,27 +61,6 @@
             <goals>
               <goal>compile</goal>
             </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
-        <artifactId>maven-install-plugin</artifactId>
-        <version>2.5.2</version>
-        <executions>
-          <execution>
-            <phase>validate</phase>
-            <goals>
-              <goal>install-file</goal>
-            </goals>
-            <configuration>
-              <groupId>cryptix</groupId>
-              <artifactId>cryptix-jce</artifactId>
-              <version>na</version>
-              <packaging>jar</packaging>
-              <generatePom>true</generatePom>
-              <file>lib/cryptix-jce-provider.jar</file>
-            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -149,9 +114,9 @@
       <version>${guice.version}</version>
     </dependency>
     <dependency>
-        <groupId>com.google.inject.extensions</groupId>
-        <artifactId>guice-assistedinject</artifactId>
-        <version>${guice.version}</version>
+      <groupId>com.google.inject.extensions</groupId>
+      <artifactId>guice-assistedinject</artifactId>
+      <version>${guice.version}</version>
     </dependency>
     <dependency>
       <groupId>com.google.inject.extensions</groupId>
@@ -165,9 +130,9 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-        <groupId>com.ibm.icu</groupId>
-        <artifactId>icu4j</artifactId>
-        <version>60.1</version>
+      <groupId>com.ibm.icu</groupId>
+      <artifactId>icu4j</artifactId>
+      <version>60.1</version>
     </dependency>
     <dependency>
       <groupId>com.google.protobuf</groupId>
@@ -195,9 +160,9 @@
       <version>19.0</version>
     </dependency>
     <dependency>
-      <groupId>cryptix</groupId>
-      <artifactId>cryptix-jce</artifactId>
-      <version>na</version>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <version>1.51</version>
     </dependency>
   </dependencies>
 </project>
