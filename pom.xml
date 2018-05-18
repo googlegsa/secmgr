@@ -78,27 +78,6 @@
           </execution>
         </executions>
       </plugin>
-
-      <plugin>
-        <artifactId>maven-install-plugin</artifactId>
-        <version>2.5.2</version>
-        <executions>
-          <execution>
-            <phase>validate</phase>
-            <goals>
-              <goal>install-file</goal>
-            </goals>
-            <configuration>
-              <groupId>cryptix</groupId>
-              <artifactId>cryptix-jce</artifactId>
-              <version>na</version>
-              <packaging>jar</packaging>
-              <generatePom>true</generatePom>
-              <file>lib/cryptix-jce-provider.jar</file>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
     </plugins>
   </build>
 
@@ -195,9 +174,15 @@
       <version>19.0</version>
     </dependency>
     <dependency>
-      <groupId>cryptix</groupId>
-      <artifactId>cryptix-jce</artifactId>
-      <version>na</version>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <version>1.51</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

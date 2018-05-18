@@ -14,20 +14,18 @@
 
 package com.google.enterprise.secmgr.ntlmssp;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-
-import cryptix.jce.provider.CryptixCrypto;
-
 import java.io.UnsupportedEncodingException;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.util.Arrays;
-
 import javax.annotation.concurrent.ThreadSafe;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 @ThreadSafe
 final class NtlmCrypto extends NtlmBase {
@@ -40,7 +38,7 @@ final class NtlmCrypto extends NtlmBase {
   private static final SecureRandom prng = new SecureRandom();
 
   static {
-    Security.addProvider(new CryptixCrypto());
+    Security.addProvider(new BouncyCastleProvider());
   }
 
   // Don't instantiate.
@@ -120,7 +118,7 @@ final class NtlmCrypto extends NtlmBase {
       byte[] keyBytes, int keyIndex)
       throws GeneralSecurityException {
     byte[] subKey = Arrays.copyOfRange(keyBytes, keyIndex, keyIndex + 7);
-    des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(subKey, DES_KEY_ALGORITHM));
+    des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(addParityBits(subKey), DES_KEY_ALGORITHM));
     System.arraycopy(des.doFinal(nonce), 0, result, resultIndex, 8);
   }
 
@@ -129,5 +127,42 @@ final class NtlmCrypto extends NtlmBase {
     System.arraycopy(prefix, 0, result, 0, prefix.length);
     System.arraycopy(suffix, 0, result, prefix.length, suffix.length);
     return result;
+  }
+
+  /**
+   * Add parity bits to a DES key: a parity bit is added after each 7th bits of the 56bit input
+   * key, making it a valid 64bit DES key.
+   *
+   * @param key56bit key without parity bits
+   * @return key with parity bits added
+   */
+  @VisibleForTesting
+  static byte[] addParityBits(byte[] key56bit) {
+    Preconditions.checkNotNull(key56bit);
+    Preconditions.checkArgument(key56bit.length == 7);
+
+    byte[] key64bit = new byte[8];
+
+    int bitPos = 1;
+    int bitCount = 0;
+
+    for (int i = 0; i < 56; i++) {
+      boolean bit = (key56bit[6 - i / 8] & (1 << (i % 8))) > 0;
+
+      if (bit) {
+        key64bit[7 - bitPos / 8] |= (1 << (bitPos % 8)) & 0xFF;
+        bitCount++;
+      }
+
+      if ((i + 1) % 7 == 0) {
+        if (bitCount % 2 == 0) {
+          key64bit[7 - bitPos / 8] |= 1;
+        }
+        bitPos++;
+        bitCount = 0;
+      }
+      bitPos++;
+    }
+    return key64bit;
   }
 }
