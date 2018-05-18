@@ -15,19 +15,16 @@
 package com.google.enterprise.secmgr.ntlmssp;
 
 import com.google.common.base.Preconditions;
-
-import cryptix.jce.provider.CryptixCrypto;
-
 import java.io.UnsupportedEncodingException;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.util.Arrays;
-
 import javax.annotation.concurrent.ThreadSafe;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 @ThreadSafe
 final class NtlmCrypto extends NtlmBase {
@@ -40,7 +37,7 @@ final class NtlmCrypto extends NtlmBase {
   private static final SecureRandom prng = new SecureRandom();
 
   static {
-    Security.addProvider(new CryptixCrypto());
+    Security.addProvider(new BouncyCastleProvider());
   }
 
   // Don't instantiate.
