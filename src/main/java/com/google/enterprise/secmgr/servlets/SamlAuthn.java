@@ -86,8 +86,7 @@ public class SamlAuthn extends SamlIdpServlet
     Decorator decorator = SessionUtil.getLogDecorator(request);
     controller.setSecureSearchApiMode(false);
     AuthnSession.setSecureSearchApiMode(false);
-    AuthnSession session = AuthnSession.getInstance(request,
-        /*createGsaSmSessionIfNotExist=*/true);
+    AuthnSession session = AuthnSession.createInstance();
     if (session == null) {
       logger.warning(decorator.apply("Could not get/make session; abandoning request."));
       initNormalResponseWithHeaders(response, HttpServletResponse.SC_EXPECTATION_FAILED)

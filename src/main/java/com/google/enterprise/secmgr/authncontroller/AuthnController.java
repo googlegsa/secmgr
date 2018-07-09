@@ -179,6 +179,7 @@ public class AuthnController {
     if (request != null) {
       session.updateIncomingCookies(request);
     }
+    setupSessionCookies(session, response);
 
     AuthnResult result;
     switch (maybeForceAuthnState(session)) {
@@ -639,9 +640,6 @@ public class AuthnController {
 
     logger.info(session.logMessage("Rendering Universal Login Form."));
     gsaLogger.log(session.getRequestId(), "Rendering Universal Login Form.");
-    if (null == SessionUtil.findGsaSessionId(request)) {
-      addAuthnSessionCookie(session, response);
-    }
     updateOutgoingCookies(session, response);
     PrintWriter writer = ServletBase.initNormalResponse(response);
     writer.print(session.getUniversalLoginForm()
@@ -649,6 +647,11 @@ public class AuthnController {
             ? ULF_ERROR_MSG
             : errorMessage));
     writer.close();
+  }
+
+  public void setupSessionCookies(AuthnSession session,
+      HttpServletResponse response) {
+    addAuthnSessionCookie(session, response);
   }
 
   private void addAuthnSessionCookie(AuthnSession session, HttpServletResponse response) {
