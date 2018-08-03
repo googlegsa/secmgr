@@ -19,6 +19,7 @@ import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getXmlSignatureRule
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.initializeSecurityPolicy;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAction;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAssertion;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAuthnFailureStatus;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAuthzDecisionStatement;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeResponse;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeSubject;
@@ -31,6 +32,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.enterprise.secmgr.authncontroller.AuthnSession;
+import com.google.enterprise.secmgr.authncontroller.AuthnSessionManager;
 import com.google.enterprise.secmgr.authzcontroller.Authorizer;
 import com.google.enterprise.secmgr.common.AuthzStatus;
 import com.google.enterprise.secmgr.common.Decorator;
@@ -57,6 +60,8 @@ import org.opensaml.saml2.core.AuthzDecisionStatement;
 import org.opensaml.saml2.core.DecisionTypeEnumeration;
 import org.opensaml.saml2.core.NameID;
 import org.opensaml.saml2.core.Response;
+import org.opensaml.saml2.core.Status;
+import org.opensaml.saml2.core.StatusCode;
 import org.opensaml.ws.message.encoder.MessageEncodingException;
 import org.opensaml.ws.transport.http.HTTPInTransport;
 import org.opensaml.ws.transport.http.HTTPOutTransport;
@@ -90,10 +95,13 @@ public final class SamlPdpBase {
 
   @Nonnull private final SamlSharedData sharedData;
   @Nonnull private final Authorizer authorizer;
+  @Nonnull private final AuthnSessionManager sessionManager;
 
-  private SamlPdpBase(SamlSharedData sharedData, Authorizer authorizer) {
+  private SamlPdpBase(SamlSharedData sharedData, Authorizer authorizer,
+      AuthnSessionManager sessionManager) {
     this.sharedData = sharedData;
     this.authorizer = authorizer;
+    this.sessionManager = sessionManager;
   }
 
   /**
@@ -104,10 +112,12 @@ public final class SamlPdpBase {
    * @return The new PDP instance.
    */
   @Nonnull
-  public static SamlPdpBase make(SamlSharedData sharedData, Authorizer authorizer) {
+  public static SamlPdpBase make(SamlSharedData sharedData, Authorizer authorizer,
+      AuthnSessionManager sessionManager) {
     Preconditions.checkNotNull(sharedData);
     Preconditions.checkNotNull(authorizer);
-    return new SamlPdpBase(sharedData, authorizer);
+    Preconditions.checkNotNull(sessionManager);
+    return new SamlPdpBase(sharedData, authorizer, sessionManager);
   }
 
   /**
@@ -127,8 +137,13 @@ public final class SamlPdpBase {
       long startDecoding = System.currentTimeMillis();
       DecodedRequest decodedRequest = decodeAuthzRequest(request);
       sessionId = decodedRequest.getSessionId();
+      AuthnSession session = sessionManager.getSession(sessionId);
+      if (session == null) {
+        logger.severe(SessionUtil.logMessage(sessionId, "Unable to find session"));
+      }
+
       long startAuthorizing = System.currentTimeMillis();
-      DecodedResponse decodedResponse = authorize(decodedRequest, decorator);
+      DecodedResponse decodedResponse = authorize(decodedRequest, decorator, session);
       long startEncoding = System.currentTimeMillis();
       ServletBase.initResponse(response);
       encodeAuthzResponse(decodedResponse, response, decorator);
@@ -315,10 +330,10 @@ public final class SamlPdpBase {
    * @return A decoded response.
    */
   @Nonnull
-  public DecodedResponse authorize(DecodedRequest request, Decorator decorator) {
+  public DecodedResponse authorize(DecodedRequest request, Decorator decorator, AuthnSession session) {
     AuthzResult result = request.violatedSecurityPolicy()
         ? AuthzResult.makeIndeterminate(Resource.resourcesToUrls(request.getResources()))
-        : authorizer.apply(request.getResources(), request.getSessionId(),
+        : authorizer.apply(request.getResources(), session,
             request.getAuthzMode() == GsaAuthz.Mode.FAST);
     ImmutableList.Builder<ResponseRecord> builder = ImmutableList.builder();
     for (RequestRecord record : request.getRecords()) {
@@ -330,7 +345,9 @@ public final class SamlPdpBase {
       }
       builder.add(new ResponseRecord(record, status));
     }
-    return new DecodedResponse(request, builder.build());
+    Status status = session != null ? makeSuccessfulStatus() : makeAuthnFailureStatus();
+
+    return new DecodedResponse(request, builder.build(), status);
   }
 
   /**
@@ -365,6 +382,7 @@ public final class SamlPdpBase {
     SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context = response.getContext();
     context.setOutboundSAMLMessage(
         makeAuthzResponse(
+            response.getStatus(),
             response.getSessionId(),
             response.getInResponseTo(),
             new DateTime(),
@@ -384,6 +402,7 @@ public final class SamlPdpBase {
       SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context = record.getContext();
       context.setOutboundSAMLMessage(
           makeAuthzResponse(
+              response.getStatus(),
               sessionId,
               record.getInResponseTo(),
               now,
@@ -405,6 +424,7 @@ public final class SamlPdpBase {
       throws IOException {
     Response samlResponse
         = makeAuthzResponse(
+            response.getStatus(),
             response.getSessionId(),
             response.getInResponseTo(),
             new DateTime(),
@@ -416,8 +436,8 @@ public final class SamlPdpBase {
     runEncoder(new HTTPSOAP11Encoder(), context, decorator);
   }
 
-  private Response makeAuthzResponse(String sessionId, String inResponseTo, DateTime now,
-      Iterable<ResponseRecord> records) {
+  private Response makeAuthzResponse(Status status, String sessionId, String inResponseTo,
+      DateTime now, Iterable<ResponseRecord> records) {
     // Note: We disregard the Action in the query and always return an
     // assertion about Action.HTTP_GET_ACTION. It's the only thing we know how
     // to test for. It might be argued that if the querier asked for anything
@@ -435,7 +455,7 @@ public final class SamlPdpBase {
     return makeResponse(
         issuer,
         now,
-        makeSuccessfulStatus(),
+        status,
         inResponseTo,
         makeAssertion(issuer, now, makeSubject(sessionId), null, statements));
   }
@@ -562,12 +582,15 @@ public final class SamlPdpBase {
   public static final class DecodedResponse {
     @Nonnull private final DecodedRequest request;
     @Nonnull private final ImmutableList<ResponseRecord> responseRecords;
+    @Nonnull private final Status status;
 
-    private DecodedResponse(DecodedRequest request, ImmutableList<ResponseRecord> responseRecords) {
+    private DecodedResponse(DecodedRequest request, ImmutableList<ResponseRecord> responseRecords,
+        Status status) {
       Preconditions.checkNotNull(request);
       Preconditions.checkNotNull(responseRecords);
       this.request = request;
       this.responseRecords = responseRecords;
+      this.status = status;
     }
 
     @Nonnull
@@ -593,6 +616,11 @@ public final class SamlPdpBase {
     @Nonnull
     private ImmutableList<ResponseRecord> getResponseRecords() {
       return responseRecords;
+    }
+
+    @Nonnull
+    public Status getStatus() {
+      return status;
     }
   }
 

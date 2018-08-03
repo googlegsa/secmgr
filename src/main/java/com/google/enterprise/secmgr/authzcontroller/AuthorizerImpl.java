@@ -61,11 +61,9 @@ public final class AuthorizerImpl implements Authorizer {
   }
 
   @Override
-  public AuthzResult apply(Collection<Resource> resources, String sessionId,
+  public AuthzResult apply(Collection<Resource> resources, AuthnSession session,
       boolean enableFastAuthz) {
-    AuthnSession session = sessionManager.getSession(sessionId);
     if (session == null) {
-      logger.warning(SessionUtil.logMessage(sessionId, "Unable to find session"));
       return AuthzResult.makeIndeterminate(Resource.resourcesToUrls(resources));
     }
     SessionSnapshot snapshot = session.getSnapshot();
