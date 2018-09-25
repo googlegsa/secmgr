@@ -1,0 +1,70 @@
+{"version": 6,
+ "CGs": [{
+  "name": "ADG1",
+  "displayName": "ADG1 display",
+  "mechanisms": [
+  {
+    "name": "form-1",
+    "typeName": "AuthnMechForm",
+    "sampleUrl": "http://form1.example.com/mockcontentserver1",
+    "timeout": 20
+  },
+  {
+    "name": "basic-1",
+    "typeName": "AuthnMechBasic",
+    "sampleUrl": "http://basic1.example.com/mockcontentserver1",
+    "timeout": 30
+  },
+  {
+    "name": "ntlm-1",
+    "typeName": "AuthnMechNtlm",
+    "sampleUrl": "http://ntlm1.example.com/mockcontentserver1",
+    "timeout": 40
+  },
+  {
+    "name": "ldap-1",
+    "typeName": "AuthnMechLdap",
+    "hostport": "ldap://ldap1.example.com/",
+    "bindDn": "cn=test",
+    "password": "pwd",
+    "searchBase": "dn=testdomain",
+    "userSearchFilter": "",
+    "groupSearchFilter": "",
+    "groupFormat": "CN",
+    "enableAuthn": true,
+    "enableGroupLookup": true,
+    "enableImplicitEveryone": true,
+    "timeout": 50
+  },
+  {
+    "name": "saml-1",
+    "typeName": "AuthnMechSaml",
+    "entityId": "entity1",
+    "timeout": 60
+  },
+  {
+    "name": "conn-1",
+    "typeName": "AuthnMechConnector",
+    "connectorName": "connector1",
+    "doGroupLookupOnly": false,
+    "timeout": 70
+  }],
+  "requiresUsername": false,
+  "requiresPassword": false,
+  "isOptional": false
+ }],
+ "params": {
+  "ACL_GROUPS_FILENAME": "acl_groups.enterprise",
+  "ACL_URLS_FILENAME": "acl_urls.enterprise",
+  "AUTHZ_CONFIG_FILENAME" : "../../../../conf/FlexAuthz.xml",
+  "DENY_RULES_FILENAME": "deny_rules.enterprise",
+  "GLOBAL_SINGLE_REQUEST_TIMEOUT": "2.5",
+  "GLOBAL_BATCH_REQUEST_TIMEOUT": "5.0",
+  "CERTIFICATE_AUTHORITIES_FILENAME": "cacerts.jks",
+  "SAML_METADATA_FILENAME": "saml-metadata.xml",
+  "SERVER_CERTIFICATE_FILENAME": "server.jks",
+  "SIGNING_CERTIFICATE_FILENAME": "saml-server-test.crt",
+  "SIGNING_KEY_FILENAME": "saml-server-test.key",
+  "STUNNEL_PORT": "7843"
+ }
+}

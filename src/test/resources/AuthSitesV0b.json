@@ -1,0 +1,44 @@
+{"CGs": [
+    {
+      "Name":"Default",
+      "requiresUsername": true,
+      "requiresPassword": false,
+      "optional": false,
+      "Domains": [
+          {
+            "authority": "",
+	    "sampleUrl": "http://afcontent-testbed.hot.corp.google.com/sslsecure/test1/",
+	    "connectorManagerName": "",
+	    "mechanism": "BASIC_AUTH",
+	    "adDomain": "",
+	    "connectorName": "",
+	    "urlPatterns": ["http://afcontent-testbed.hot.corp.google.com/sslsecure/test1/"],
+	    "redirectUrl": ""
+	  }
+      ]
+    },
+    {
+      "Name": "Form",
+      "requiresUsername": false,
+      "requiresPassword": false,
+      "optional": false,
+      "Domains": [
+	  {
+	    "authority": "",
+	    "sampleUrl": "http://ent-test-siteminder1.corp.google.com/test1/",
+	    "connectorManagerName": "",
+	    "mechanism": "FORMS_AUTH",
+	    "adDomain": "",
+	    "connectorName": "",
+	    "urlPatterns": ["http://ent-test-siteminder1.corp.google.com/test1/"],
+	    "redirectUrl": "http://ent-test-siteminder1.corp.google.com/test1/"
+	  }
+      ]
+    },
+    {
+      "Name": "Basic",
+      "requiresUsername": false,
+      "requiresPassword": false,
+      "optional": false
+    }
+]}

@@ -1,0 +1,20 @@
+{
+  "version":1,
+  "CGs":
+  [
+    {
+      "name":"Default",
+      "mechanisms":
+      [
+	{
+	  "typeName":"AuthnMechForm",
+	  "sampleUrl":"http://localhost:47998/content1",
+	  "urlPatterns":["http://localhost:47998/content1"]
+	}
+      ],
+      "requiresUsername":true,
+      "requiresPassword":false,
+      "isOptional":false
+    }
+  ]
+}
