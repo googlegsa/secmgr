@@ -16,7 +16,7 @@ syntax = "proto2";
 package enterprise.secmgr.common;
 option java_package = "com.google.enterprise.secmgr.common";
 
-import "enterprise/supergsa/security/acl.proto";
+import "acl.proto";
 
 // TODO: Consoliate AuthzStatus with other definitions:
 // Decision in acl.proto and AuthzResponseInfo.

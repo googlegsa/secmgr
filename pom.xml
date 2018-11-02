@@ -19,41 +19,29 @@
   </properties>
 
   <build>
-    <extensions>
+    <plugins>
       <!-- OS Detection for protoc compiler artifact resolution -->
-      <extension>
+      <plugin>
         <groupId>kr.motd.maven</groupId>
         <artifactId>os-maven-plugin</artifactId>
-        <version>1.5.0.Final</version>
-      </extension>
-    </extensions>
-    <plugins>
+        <version>1.6.1</version>
+        <executions>
+          <execution>
+            <phase>initialize</phase>
+            <goals>
+              <goal>detect</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Generate protobuffer java stub -->
       <plugin>
         <groupId>org.xolstice.maven.plugins</groupId>
         <artifactId>protobuf-maven-plugin</artifactId>
         <version>0.5.1</version>
         <extensions>true</extensions>
-        <executions>
-          <execution>
-            <goals>
-              <goal>compile</goal>
-              <goal>test-compile</goal>
-            </goals>
-            <configuration>
-              <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <!-- generate protobuffer java classes -->
-      <plugin>
-        <groupId>org.xolstice.maven.plugins</groupId>
-        <artifactId>protobuf-maven-plugin</artifactId>
-        <version>0.5.1</version>
         <configuration>
-          <protoSourceRoot>
-            ${project.build.sourceDirectory}
-          </protoSourceRoot>
+          <clearOutputDirectory>false</clearOutputDirectory>
         </configuration>
         <executions>
           <execution>
@@ -61,6 +49,9 @@
             <goals>
               <goal>compile</goal>
             </goals>
+            <configuration>
+              <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+            </configuration>
           </execution>
         </executions>
       </plugin>
