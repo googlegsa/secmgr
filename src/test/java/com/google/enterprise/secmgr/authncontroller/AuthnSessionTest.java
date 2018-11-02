@@ -37,10 +37,8 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 import java.util.Set;
-import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.saml2.core.AuthnRequest;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.Response;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.saml.common.SAMLObject;
 
 /**
  * Generic tests for the authentication session, which is a state machine with
@@ -324,22 +322,19 @@ public class AuthnSessionTest extends SecurityManagerTestCase {
 
   private void newAuthenticatingSession() throws IOException {
     newIdleSession();
-    SAMLMessageContext<AuthnRequest, Response, NameID> context =
-        OpenSamlUtil.makeSamlMessageContext();
+    MessageContext<SAMLObject> context = OpenSamlUtil.makeSamlMessageContext();
     session.setStateAuthenticating(new URL(AUTHN_ENTRY_URL), context);
   }
 
   private void allowAuthenticatingTransition() throws IOException {
-    SAMLMessageContext<AuthnRequest, Response, NameID> context =
-        OpenSamlUtil.makeSamlMessageContext();
+    MessageContext<SAMLObject> context = OpenSamlUtil.makeSamlMessageContext();
     session.setStateAuthenticating(new URL(AUTHN_ENTRY_URL), context);
     assertEquals(AuthnState.AUTHENTICATING, session.getState());
   }
 
   private void denyAuthenticatingTransition() throws IOException {
     try {
-      SAMLMessageContext<AuthnRequest, Response, NameID> context =
-          OpenSamlUtil.makeSamlMessageContext();
+      MessageContext<SAMLObject> context = OpenSamlUtil.makeSamlMessageContext();
       session.setStateAuthenticating(new URL(AUTHN_ENTRY_URL), context);
       fail("Transition to AUTHENTICATING state was allowed but should have been denied");
     } catch (IllegalStateException e) {

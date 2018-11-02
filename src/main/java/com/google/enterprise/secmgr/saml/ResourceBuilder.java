@@ -15,7 +15,7 @@
  */
 package com.google.enterprise.secmgr.saml;
 
-import org.opensaml.common.impl.AbstractSAMLObjectBuilder;
+import org.opensaml.saml.common.AbstractSAMLObjectBuilder;
 
 /** A factory for {@link Resource}. */
 final class ResourceBuilder extends AbstractSAMLObjectBuilder<Resource> {

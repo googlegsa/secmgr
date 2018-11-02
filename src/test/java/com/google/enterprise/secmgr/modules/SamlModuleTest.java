@@ -51,7 +51,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import org.opensaml.common.xml.SAMLConstants;
+import org.opensaml.saml.common.xml.SAMLConstants;
 
 /**
  * Tests for the {@link SamlModule} class.
@@ -64,8 +64,6 @@ public class SamlModuleTest extends SecurityManagerTestCase {
   private static final String URL1 = "http://example.com/doc1";
   private static final String URL2 = "http://example.com/doc2";
   private static final String URL3 = "http://example.com/doc3";
-
-  private static final String[] ALL_URLS = new String[] { URL1, URL2, URL3 };
 
   private static final String MECH1_NAME = "mech1";
   private static final String MECH2_NAME = "mech2";

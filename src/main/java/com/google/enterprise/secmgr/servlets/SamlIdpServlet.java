@@ -30,32 +30,31 @@ import com.google.enterprise.secmgr.common.ServletBase;
 import com.google.enterprise.secmgr.common.SessionUtil;
 import com.google.enterprise.secmgr.config.ConfigSingleton;
 import com.google.enterprise.secmgr.saml.SamlSharedData;
-
-import org.apache.velocity.app.VelocityEngine;
-import org.apache.velocity.runtime.RuntimeConstants;
-import org.apache.velocity.runtime.log.JdkLogChute;
-import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.binding.encoding.HTTPArtifactEncoder;
-import org.opensaml.saml2.binding.encoding.HTTPPostEncoder;
-import org.opensaml.saml2.core.AuthnRequest;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.Response;
-import org.opensaml.saml2.core.Status;
-import org.opensaml.ws.transport.http.HttpServletResponseAdapter;
-import org.opensaml.xml.security.SecurityException;
-
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.Immutable;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.velocity.app.VelocityEngine;
+import org.apache.velocity.runtime.RuntimeConstants;
+import org.apache.velocity.runtime.log.JdkLogChute;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.messaging.handler.MessageHandlerException;
+import org.opensaml.saml.common.SAMLObject;
+import org.opensaml.saml.common.messaging.context.SAMLArtifactContext;
+import org.opensaml.saml.common.messaging.context.SAMLEndpointContext;
+import org.opensaml.saml.common.messaging.context.SAMLPeerEntityContext;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.saml2.binding.encoding.impl.HTTPArtifactEncoder;
+import org.opensaml.saml.saml2.binding.encoding.impl.HTTPPostEncoder;
+import org.opensaml.saml.saml2.core.Response;
+import org.opensaml.saml.saml2.core.Status;
+import org.opensaml.saml.saml2.metadata.Endpoint;
 
 /**
  * An abstract base class for servlets participating in SAML SSO authentication.
@@ -101,10 +100,12 @@ public abstract class SamlIdpServlet extends SamlServlet {
    * @return The binding to be used.
    */
   @Nullable
-  public synchronized String getResponseBinding(SAMLMessageContext<?, ?, ?> context) {
+  public synchronized String getResponseBinding(MessageContext<SAMLObject> context) {
+    SAMLEndpointContext endpointContext =
+        context.getSubcontext(SAMLPeerEntityContext.class).getSubcontext(SAMLEndpointContext.class);
     return (forcedResponseBinding != null)
         ? forcedResponseBinding
-        : context.getPeerEntityEndpoint().getBinding();
+        : endpointContext.getEndpoint().getBinding();
   }
 
   /**
@@ -122,7 +123,7 @@ public abstract class SamlIdpServlet extends SamlServlet {
     switch (controller.authenticate(session, request, response)) {
       case SUCCESSFUL:
         // Generate a successful SAML response.
-        SAMLMessageContext<AuthnRequest, Response, NameID> context = session.getSamlSsoContext();
+        MessageContext<SAMLObject> context = session.getSamlSsoContext();
         encodeResponse(SessionUtil.getLogDecorator(session.getSessionId()), response, context,
             (new SimpleResponseGenerator(context)).generate(session.getSnapshot()));
         session.setStateIdle();
@@ -169,7 +170,7 @@ public abstract class SamlIdpServlet extends SamlServlet {
     Status status;
     if (exception instanceof AuthnSession.InconsistentStateException) {
       status = makeResponderFailureStatus(exception.getMessage());
-    } else if (exception instanceof SecurityException) {
+    } else if (exception instanceof MessageHandlerException) {
       status = makeSecurityFailureStatus(exception.getMessage());
     } else {
       String message = "Internal error while authenticating: ";
@@ -185,7 +186,7 @@ public abstract class SamlIdpServlet extends SamlServlet {
     String message = (status.getStatusMessage() != null)
         ? Strings.emptyToNull(status.getStatusMessage().getMessage())
         : null;
-    SAMLMessageContext<AuthnRequest, Response, NameID> context;
+    MessageContext<SAMLObject> context;
     try {
       context = session.getSamlSsoContext();
     } catch (IllegalStateException e) {
@@ -251,7 +252,7 @@ public abstract class SamlIdpServlet extends SamlServlet {
     String message = (status.getStatusMessage() != null)
         ? Strings.emptyToNull(status.getStatusMessage().getMessage())
         : null;
-    SAMLMessageContext<AuthnRequest, Response, NameID> context;
+    MessageContext<SAMLObject> context;
     try {
       context = session.getSamlSsoContext();
     } catch (IllegalStateException e) {
@@ -277,22 +278,26 @@ public abstract class SamlIdpServlet extends SamlServlet {
   protected void encodeResponse(
       Decorator decorator,
       HttpServletResponse response,
-      SAMLMessageContext<AuthnRequest, Response, NameID> context,
+      MessageContext<SAMLObject> context,
       Response samlResponse)
       throws IOException {
-    context.setOutboundSAMLMessage(samlResponse);
+    context.setMessage(samlResponse);
 
     // Encode the response message.
     initResponse(response);
-    context.setOutboundMessageTransport(new HttpServletResponseAdapter(response, true));
-
     String responseBinding = getResponseBinding(context);
     if (SAMLConstants.SAML2_ARTIFACT_BINDING_URI.equals(responseBinding)) {
-      HTTPArtifactEncoder encoder = new HTTPArtifactEncoder(null, null, getArtifactMap());
+      HTTPArtifactEncoder encoder = new HTTPArtifactEncoder();
+      encoder.setHttpServletResponse(response);
+      encoder.setArtifactMap(getArtifactMap());
       encoder.setPostEncoding(false);
+      initArtifactContext(context);
       runEncoder(encoder, context, decorator);
     } else if (SAMLConstants.SAML2_POST_BINDING_URI.equals(responseBinding)) {
-      HTTPPostEncoder encoder = new HTTPPostEncoder(velocityEngine, "saml-post-template.xhtml");
+      HTTPPostEncoder encoder = new HTTPPostEncoder();
+      encoder.setHttpServletResponse(response);
+      encoder.setVelocityEngine(velocityEngine);
+      encoder.setVelocityTemplateId("saml-post-template.xhtml");
       // Synchronize access to velocity engine; I don't trust it to be thread-safe.
       synchronized (velocityEngine) {
         runEncoder(encoder, context, decorator);
@@ -300,5 +305,14 @@ public abstract class SamlIdpServlet extends SamlServlet {
     } else {
       throw new IllegalStateException("Unknown binding: " + responseBinding);
     }
+  }
+
+  private void initArtifactContext(MessageContext<SAMLObject> context) {
+    SAMLPeerEntityContext peerEntityContext = context.getSubcontext(SAMLPeerEntityContext.class);
+    Endpoint endpoint = peerEntityContext.getSubcontext(SAMLEndpointContext.class).getEndpoint();
+    SAMLArtifactContext artifactContext = context.getSubcontext(SAMLArtifactContext.class, true);
+    artifactContext.setSourceArtifactResolutionServiceEndpointIndex(0);
+    artifactContext.setSourceArtifactResolutionServiceEndpointURL(endpoint.getLocation());
+    artifactContext.setSourceEntityId(peerEntityContext.getEntityId());
   }
 }

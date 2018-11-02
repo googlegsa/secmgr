@@ -17,17 +17,15 @@ package com.google.enterprise.secmgr.modules;
 import static com.google.enterprise.secmgr.saml.MetadataEditor.SAML_BINDING_HTTP_ARTIFACT;
 import static com.google.enterprise.secmgr.saml.MetadataEditor.SAML_BINDING_HTTP_POST;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getBasicParserPool;
-import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getMandatoryAuthenticatedMessageRule;
-import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getMandatoryIssuerRule;
-import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getXmlSignatureRule;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getCheckMandatoryAuthenticatedMessageHandler;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getCheckMandatoryIssuerHandler;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getXmlSignatureHandler;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.initializeSecurityPolicy;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeArtifactResolve;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAuthnRequest;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.runDecoder;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.runEncoder;
-import static org.opensaml.common.xml.SAMLConstants.SAML20P_NS;
-import static org.opensaml.common.xml.SAMLConstants.SAML2_REDIRECT_BINDING_URI;
-import static org.opensaml.common.xml.SAMLConstants.SAML2_SOAP11_BINDING_URI;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.runInboundMessageHandlers;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -37,67 +35,70 @@ import com.google.enterprise.secmgr.common.ServletBase;
 import com.google.enterprise.secmgr.common.SessionUtil;
 import com.google.enterprise.secmgr.http.HttpClientUtil;
 import com.google.enterprise.secmgr.http.HttpExchange;
-import com.google.enterprise.secmgr.saml.HttpExchangeToInTransport;
-import com.google.enterprise.secmgr.saml.HttpExchangeToOutTransport;
+import com.google.enterprise.secmgr.saml.HttpExchangeToHttpServletRequest;
+import com.google.enterprise.secmgr.saml.HttpExchangeToHttpServletResponse;
 import com.google.enterprise.secmgr.saml.Metadata;
 import com.google.enterprise.secmgr.saml.SamlSharedData;
-
-import org.joda.time.DateTime;
-import org.opensaml.common.SAMLObject;
-import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.binding.decoding.HTTPPostDecoder;
-import org.opensaml.saml2.binding.decoding.HTTPSOAP11Decoder;
-import org.opensaml.saml2.binding.encoding.HTTPRedirectDeflateEncoder;
-import org.opensaml.saml2.binding.encoding.HTTPSOAP11Encoder;
-import org.opensaml.saml2.core.ArtifactResolve;
-import org.opensaml.saml2.core.ArtifactResponse;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.AuthnRequest;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.Response;
-import org.opensaml.saml2.metadata.ArtifactResolutionService;
-import org.opensaml.saml2.metadata.AssertionConsumerService;
-import org.opensaml.saml2.metadata.EntityDescriptor;
-import org.opensaml.saml2.metadata.IDPSSODescriptor;
-import org.opensaml.saml2.metadata.SPSSODescriptor;
-import org.opensaml.saml2.metadata.SSODescriptor;
-import org.opensaml.saml2.metadata.SingleSignOnService;
-import org.opensaml.saml2.metadata.provider.MetadataProvider;
-import org.opensaml.security.MetadataCredentialResolver;
-import org.opensaml.security.MetadataCriteria;
-import org.opensaml.security.SAMLSignatureProfileValidator;
-import org.opensaml.util.URLBuilder;
-import org.opensaml.ws.message.decoder.MessageDecodingException;
-import org.opensaml.ws.message.encoder.MessageEncodingException;
-import org.opensaml.ws.security.SecurityPolicyException;
-import org.opensaml.ws.transport.http.HttpServletRequestAdapter;
-import org.opensaml.ws.transport.http.HttpServletResponseAdapter;
-import org.opensaml.xml.Configuration;
-import org.opensaml.xml.security.CriteriaSet;
-import org.opensaml.xml.security.SecurityException;
-import org.opensaml.xml.security.credential.UsageType;
-import org.opensaml.xml.security.criteria.EntityIDCriteria;
-import org.opensaml.xml.security.criteria.UsageCriteria;
-import org.opensaml.xml.security.keyinfo.KeyInfoCredentialResolver;
-import org.opensaml.xml.signature.Signature;
-import org.opensaml.xml.signature.impl.ExplicitKeySignatureTrustEngine;
-import org.opensaml.xml.util.Pair;
-import org.opensaml.xml.validation.ValidationException;
-
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import javax.annotation.Nonnull;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import net.shibboleth.utilities.java.support.collection.Pair;
+import net.shibboleth.utilities.java.support.component.ComponentInitializationException;
+import net.shibboleth.utilities.java.support.net.URLBuilder;
+import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
+import org.joda.time.DateTime;
+import org.opensaml.core.criterion.EntityIdCriterion;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.messaging.decoder.MessageDecodingException;
+import org.opensaml.messaging.encoder.MessageEncodingException;
+import org.opensaml.messaging.handler.MessageHandlerException;
+import org.opensaml.saml.common.SAMLObject;
+import org.opensaml.saml.common.binding.SAMLBindingSupport;
+import org.opensaml.saml.common.binding.security.impl.ReceivedEndpointSecurityHandler;
+import org.opensaml.saml.common.messaging.context.SAMLEndpointContext;
+import org.opensaml.saml.common.messaging.context.SAMLMetadataContext;
+import org.opensaml.saml.common.messaging.context.SAMLPeerEntityContext;
+import org.opensaml.saml.common.messaging.context.SAMLSelfEntityContext;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.criterion.EntityRoleCriterion;
+import org.opensaml.saml.metadata.resolver.MetadataResolver;
+import org.opensaml.saml.metadata.resolver.impl.PredicateRoleDescriptorResolver;
+import org.opensaml.saml.saml2.binding.decoding.impl.HTTPPostDecoder;
+import org.opensaml.saml.saml2.binding.decoding.impl.HTTPSOAP11Decoder;
+import org.opensaml.saml.saml2.binding.encoding.impl.HTTPRedirectDeflateEncoder;
+import org.opensaml.saml.saml2.binding.encoding.impl.HTTPSOAP11Encoder;
+import org.opensaml.saml.saml2.core.ArtifactResponse;
+import org.opensaml.saml.saml2.core.Assertion;
+import org.opensaml.saml.saml2.core.AuthnRequest;
+import org.opensaml.saml.saml2.core.Response;
+import org.opensaml.saml.saml2.metadata.ArtifactResolutionService;
+import org.opensaml.saml.saml2.metadata.AssertionConsumerService;
+import org.opensaml.saml.saml2.metadata.EntityDescriptor;
+import org.opensaml.saml.saml2.metadata.IDPSSODescriptor;
+import org.opensaml.saml.saml2.metadata.SPSSODescriptor;
+import org.opensaml.saml.saml2.metadata.SSODescriptor;
+import org.opensaml.saml.saml2.metadata.SingleSignOnService;
+import org.opensaml.saml.security.impl.MetadataCredentialResolver;
+import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
+import org.opensaml.security.SecurityException;
+import org.opensaml.security.credential.UsageType;
+import org.opensaml.security.criteria.UsageCriterion;
+import org.opensaml.xmlsec.config.DefaultSecurityConfigurationBootstrap;
+import org.opensaml.xmlsec.context.SecurityParametersContext;
+import org.opensaml.xmlsec.keyinfo.KeyInfoCredentialResolver;
+import org.opensaml.xmlsec.signature.Signature;
+import org.opensaml.xmlsec.signature.support.SignatureException;
+import org.opensaml.xmlsec.signature.support.impl.ExplicitKeySignatureTrustEngine;
 
 /**
  * A library implementing most of the functionality of a SAML Service Provider
@@ -240,7 +241,7 @@ public final class SamlAuthnClient {
   @Nonnull
   public AssertionConsumerService getAssertionConsumerService(String binding)
       throws IOException {
-    SPSSODescriptor role = getLocalEntity().getSPSSODescriptor(SAML20P_NS);
+    SPSSODescriptor role = getLocalEntity().getSPSSODescriptor(SAMLConstants.SAML20P_NS);
     for (AssertionConsumerService acs : role.getAssertionConsumerServices()) {
       if (binding.equals(acs.getBinding())) {
         return acs;
@@ -252,35 +253,51 @@ public final class SamlAuthnClient {
   /**
    * Sends an AuthnRequest message to the IdP via the redirect protocol.
    *
+   * @param request The HTTP request
    * @param response An HTTP response message that will be filled with the encoded redirect.
    * @param decorator A log-message decorator.
    * @throws IOException if there are I/O errors while sending the message.
    */
-  public void sendAuthnRequest(HttpServletResponse response, Decorator decorator)
+  public void sendAuthnRequest(
+      HttpServletRequest request, HttpServletResponse response, Decorator decorator)
       throws IOException {
-    SAMLMessageContext<SAMLObject, AuthnRequest, NameID> context
-        = sharedData.makeSamlMessageContext(metadata);
-    sharedData.initializePeerEntity(context, peerEntityId,
+    MessageContext<SAMLObject> context = sharedData.makeSamlMessageContext(metadata);
+    sharedData.initializePeerEntity(
+        context,
+        peerEntityId,
         SingleSignOnService.DEFAULT_ELEMENT_NAME,
-        SAML2_REDIRECT_BINDING_URI);
-    if (context.getPeerEntityEndpoint() == null) {
-      throw new IllegalArgumentException("Peer entity endpoint is null for :"
-                                          + context.getPeerEntityId());
+        SAMLConstants.SAML2_REDIRECT_BINDING_URI);
+    SAMLSelfEntityContext selfEntityContext = context.getSubcontext(SAMLSelfEntityContext.class);
+    SAMLPeerEntityContext peerEntityContext =
+        context.getSubcontext(SAMLPeerEntityContext.class, false);
+    SAMLEndpointContext endpointContext =
+        peerEntityContext.getSubcontext(SAMLEndpointContext.class, false);
+    if (endpointContext == null || endpointContext.getEndpoint() == null) {
+      throw new IllegalArgumentException(
+          "Peer entity endpoint is null for :" + peerEntityContext.getEntityId());
     }
     // Generate the request
-    AuthnRequest authnRequest =
-        makeAuthnRequest(context.getOutboundMessageIssuer(), new DateTime());
+    AuthnRequest authnRequest = makeAuthnRequest(selfEntityContext.getEntityId(), new DateTime());
     authnRequest.setProviderName(SM_PROVIDER_NAME);
-    authnRequest.setIsPassive(false); 
-    authnRequest.setDestination(context.getPeerEntityEndpoint().getLocation());
+    authnRequest.setIsPassive(false);
+    authnRequest.setDestination(endpointContext.getEndpoint().getLocation());
 
     // If we're signing the request, set up dynamic service pointers.
-    if (context.getOuboundSAMLMessageSigningCredential() != null) {
-      SPSSODescriptor sp = (SPSSODescriptor) context.getLocalEntityRoleMetadata();
+    SecurityParametersContext securityParametersContext =
+        context.getSubcontext(SecurityParametersContext.class);
+    if (securityParametersContext != null
+        && securityParametersContext.getSignatureSigningParameters() != null
+        && securityParametersContext.getSignatureSigningParameters().getSigningCredential()
+            != null) {
+      SAMLMetadataContext metadataContext = context.getSubcontext(SAMLMetadataContext.class, false);
+      SPSSODescriptor sp = (SPSSODescriptor) metadataContext.getRoleDescriptor();
       List<AssertionConsumerService> services = sp.getAssertionConsumerServices();
       AssertionConsumerService foundService = null;
 
-      SSODescriptor idp = (SSODescriptor) context.getPeerEntityRoleMetadata();
+      SAMLMetadataContext peerEntityMetadataContext =
+          peerEntityContext.getSubcontext(SAMLMetadataContext.class, false);
+
+      SSODescriptor idp = (SSODescriptor) peerEntityMetadataContext.getRoleDescriptor();
       if (idp != null && !idp.getArtifactResolutionServices().isEmpty()) {
         for (AssertionConsumerService service : services) {
           if (service.getBinding().equals(SAML_BINDING_HTTP_ARTIFACT)) {
@@ -310,7 +327,7 @@ public final class SamlAuthnClient {
     }
 
     logger.fine("binding " + authnRequest.getProtocolBinding());
-    context.setOutboundSAMLMessage(authnRequest);
+    context.setMessage(authnRequest);
 
     // Remember the request ID for later.
     synchronized (REQUEST_ID_LOCK) {
@@ -322,8 +339,9 @@ public final class SamlAuthnClient {
 
     // Send the request via redirect to the user agent
     ServletBase.initResponse(response);
-    context.setOutboundMessageTransport(new HttpServletResponseAdapter(response, true));
-    runEncoder(new RedirectEncoder(), context, decorator);
+    RedirectEncoder encoder = new RedirectEncoder();
+    encoder.setHttpServletResponse(response);
+    runEncoder(encoder, context, decorator);
   }
 
   /**
@@ -333,12 +351,12 @@ public final class SamlAuthnClient {
    * @param binding The SAML binding that was used to transport the request.
    * @return The decoded response.
    * @throws IOException if there are I/O errors while decoding the message.
-   * @throws SecurityException if the decoded message violates the security policy.
+   * @throws MessageHandlerException if the decoded message violates the security policy.
    * @throws IllegalArgumentException if the binding isn't supported.
    */
   @Nonnull
   public Response decodeResponse(HttpServletRequest request, String binding)
-      throws IOException, SecurityException {
+      throws IOException, MessageHandlerException {
     if (SAMLConstants.SAML2_POST_BINDING_URI.equals(binding)) {
       return decodePostResponse(request);
     } else if (SAMLConstants.SAML2_ARTIFACT_BINDING_URI.equals(binding)) {
@@ -348,50 +366,52 @@ public final class SamlAuthnClient {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private Response decodePostResponse(HttpServletRequest request)
-      throws IOException, SecurityException {
+      throws IOException, MessageHandlerException {
     Decorator decorator = SessionUtil.getLogDecorator(request);
-    SAMLMessageContext<Response, SAMLObject, NameID> context
-        = sharedData.makeSamlMessageContext(metadata);
-    initializeSecurityPolicy(context,
-        getMandatoryIssuerRule(),
-        getXmlSignatureRule(),
-        getMandatoryAuthenticatedMessageRule());
-    sharedData.initializePeerEntity(context, peerEntityId,
+    MessageContext<SAMLObject> context = sharedData.makeSamlMessageContext(metadata);
+    ReceivedEndpointSecurityHandler endpointSecurityHandler = new ReceivedEndpointSecurityHandler();
+    endpointSecurityHandler.setHttpServletRequest(request);
+    initializeSecurityPolicy(
+        context,
+        getCheckMandatoryIssuerHandler(),
+        getXmlSignatureHandler(),
+        getCheckMandatoryAuthenticatedMessageHandler(),
+        endpointSecurityHandler);
+
+    sharedData.initializePeerEntity(
+        context,
+        peerEntityId,
         SingleSignOnService.DEFAULT_ELEMENT_NAME,
-        SAML2_REDIRECT_BINDING_URI);
+        SAMLConstants.SAML2_REDIRECT_BINDING_URI);
 
     boolean responseFromAuthnIssuer = false;
-    context.setInboundMessageTransport(new HttpServletRequestAdapter(request));
-    try {
-      // Two major things are done in all decoders extending
-      // org.opensaml.ws.message.decoder.BaseMessageDecoder#decode():
-      //
-      // 1. Do decoding. Various decoders can deal with different SAML message bindings, including
-      //    HTTP POST, HTTP Artifact, SOAP 11, etc. Various decoders can (must) override doDecode().
-      //
-      // 2. Process security policy. BaseMessageDecoder#processSecurityPolicy provides the default
-      //    implementation of that, and children classes usually don't override it.
-      //
-      // SecurityException will only be thrown by processSecurityPolicy, which means the decoding
-      // has been done without throwing exceptions. Note, not throwing exception during decoding
-      // doesn't mean the inbound SAML message is not null. It depends on concrete decoder's
-      // implementation.
-      //
-      // So, with this said, here, we are dependent on PARTIAL results of running the decoder.
-      // However, catching SecurityException is a good enough indicator of failing verifying the
-      // entire Response and indicator of continuing verifying Assertion if extracted Response is
-      // not null.
-      runDecoder(new HTTPPostDecoder(getBasicParserPool()), context, decorator,
-          Response.DEFAULT_ELEMENT_NAME);
-      responseFromAuthnIssuer = true;
-    } catch (SecurityPolicyException e) {
-      // Fine. Go check assertions.
-      logger.log(Level.FINE,
-          "Get SecurityPolicyException in decoding response. Continue with"
-          + " checking whether there is verified and trusted assertion.", e);
-    }
-    Response samlResponse = context.getInboundSAMLMessage();
+    HTTPPostDecoder decoder = new HTTPPostDecoder();
+    decoder.setParserPool(getBasicParserPool());
+    decoder.setHttpServletRequest(request);
+
+    // Two major things are done in all decoders extending
+    // org.opensaml.ws.message.decoder.BaseMessageDecoder#decode():
+    //
+    // 1. Do decoding. Various decoders can deal with different SAML message bindings, including
+    //    HTTP POST, HTTP Artifact, SOAP 11, etc. Various decoders can (must) override doDecode().
+    //
+    // 2. Process message handlers. OpenSamlUtils#runIncomingMessageHandlers invokes them.
+    //
+    // MessageHandlerException will only be thrown by runIncomingMessageHandlers, which means the
+    // decoding has been done without throwing exceptions. Note, not throwing exception during
+    // decoding doesn't mean the inbound SAML message is not null. It depends on concrete decoder's
+    // implementation.
+    //
+    // So, with this said, here, we are dependent on PARTIAL results of running the decoder.
+    // However, catching MessageHandlerException is a good enough indicator of failing verifying the
+    // entire Response and indicator of continuing verifying Assertion if extracted Response is
+    // not null.
+    runDecoder(decoder, context, decorator);
+    runInboundMessageHandlers(context);
+    responseFromAuthnIssuer = true;
+    Response samlResponse = (Response) context.getMessage();
     if (samlResponse == null) {
       throw new IOException("Decoded SAML response is null");
     }
@@ -401,7 +421,7 @@ public final class SamlAuthnClient {
     }
 
     if (null == findValidAssertion(samlResponse)) {
-      throw new SecurityPolicyException("No assertion from authenticated issuer!");
+      throw new MessageHandlerException("No assertion from authenticated issuer!");
     }
 
     return samlResponse;
@@ -412,7 +432,7 @@ public final class SamlAuthnClient {
   // Otherwise, we might have security risk, that is, we might trust valid but un-verified
   // assertion. Consider addressing this in a later CL if it's desired. In most customer cases, a
   // response should contain only one assertion.
-  private Assertion findValidAssertion(Response samlResponse) throws IOException {
+  private Assertion findValidAssertion(Response samlResponse) {
     if (samlResponse == null) {
       return null;
     }
@@ -426,12 +446,12 @@ public final class SamlAuthnClient {
   }
 
   private boolean verifySignatureBasedOnMetadata(Assertion assertion) {
-    return verifySignatureBasedOnMetadataInternal(assertion, metadata.getProvider());
+    return verifySignatureBasedOnMetadataInternal(assertion, metadata.getResolver());
   }
 
   @VisibleForTesting
-  static boolean verifySignatureBasedOnMetadataInternal(Assertion assertion,
-      MetadataProvider mdProvider) {
+  static boolean verifySignatureBasedOnMetadataInternal(
+      Assertion assertion, MetadataResolver metadataResolver) {
     Signature sig = assertion.getSignature();
     if (sig == null) {
       // no signature attached
@@ -444,7 +464,7 @@ public final class SamlAuthnClient {
     SAMLSignatureProfileValidator validator = new SAMLSignatureProfileValidator();
     try {
       validator.validate(sig);
-    } catch (ValidationException e) {
+    } catch (SignatureException e) {
       // Quoted from https://wiki.shibboleth.net/confluence/display/OpenSAML/OSTwoUserManJavaDSIG
       //
       // In order to prevent certain types of denial-of-service attacks associated with signature
@@ -456,19 +476,24 @@ public final class SamlAuthnClient {
     }
 
     // Verifying a Signature with SAML 2 Metadata Information
-    MetadataCredentialResolver mdResolver = new MetadataCredentialResolver(mdProvider);
+    MetadataCredentialResolver mdResolver = new MetadataCredentialResolver();
+    PredicateRoleDescriptorResolver rdResolver =
+        new PredicateRoleDescriptorResolver(metadataResolver);
+    mdResolver.setRoleDescriptorResolver(rdResolver);
     KeyInfoCredentialResolver keyInfoCredResolver =
-        Configuration.getGlobalSecurityConfiguration().getDefaultKeyInfoCredentialResolver();
+        DefaultSecurityConfigurationBootstrap.buildBasicInlineKeyInfoCredentialResolver();
+    mdResolver.setKeyInfoCredentialResolver(keyInfoCredResolver);
     ExplicitKeySignatureTrustEngine engine =
         new ExplicitKeySignatureTrustEngine(mdResolver, keyInfoCredResolver);
     CriteriaSet criteriaSet = new CriteriaSet();
-    criteriaSet.add(new EntityIDCriteria(assertion.getIssuer().getValue()));
-    criteriaSet.add(new MetadataCriteria(IDPSSODescriptor.DEFAULT_ELEMENT_NAME,
-          SAMLConstants.SAML20P_NS));
-    criteriaSet.add(new UsageCriteria(UsageType.SIGNING));
+    criteriaSet.add(new EntityIdCriterion(assertion.getIssuer().getValue()));
+    criteriaSet.add(new EntityRoleCriterion(IDPSSODescriptor.DEFAULT_ELEMENT_NAME));
+    criteriaSet.add(new UsageCriterion(UsageType.SIGNING));
 
     boolean validated = false;
     try {
+      mdResolver.initialize();
+      rdResolver.initialize();
       if (engine.validate(sig, criteriaSet)) {
         logger.fine("Successfully verified an assertion");
         validated = true;
@@ -476,6 +501,8 @@ public final class SamlAuthnClient {
     } catch (SecurityException e) {
       logger.log(
           Level.WARNING, "SecurityException during validating signature via TrustEngine", e);
+    } catch (ComponentInitializationException e) {
+      logger.log(Level.WARNING, "Initialization of MetadataCredentialResolver failed", e);
     }
     if (!validated) {
       logger.warning(
@@ -485,7 +512,7 @@ public final class SamlAuthnClient {
   }
 
   private Response decodeArtifactResponse(HttpServletRequest request)
-      throws IOException, SecurityException {
+      throws IOException, MessageHandlerException {
     Decorator decorator = SessionUtil.getLogDecorator(request);
     try {
       return resolveArtifact(request, getArtifact(request), decorator);
@@ -505,30 +532,38 @@ public final class SamlAuthnClient {
     return artifact;
   }
 
-  private Response resolveArtifact(HttpServletRequest request, String artifact,
-      Decorator decorator)
-      throws IOException, SecurityException, MessageDecodingException {
+  private Response resolveArtifact(HttpServletRequest request, String artifact, Decorator decorator)
+      throws IOException, MessageHandlerException, MessageDecodingException {
     // Establish the SAML message context.
-    SAMLMessageContext<ArtifactResponse, ArtifactResolve, NameID> context
-        = sharedData.makeSamlMessageContext(metadata);
-    sharedData.initializePeerEntity(context, peerEntityId,
+    MessageContext<SAMLObject> outboundContext = sharedData.makeSamlMessageContext(metadata);
+    MessageContext<SAMLObject> inboundContext = sharedData.makeSamlMessageContext(metadata);
+    sharedData.initializePeerEntity(
+        outboundContext,
+        peerEntityId,
         ArtifactResolutionService.DEFAULT_ELEMENT_NAME,
-        SAML2_SOAP11_BINDING_URI);
+        SAMLConstants.SAML2_SOAP11_BINDING_URI);
 
     // Generate the request.
-    context.setOutboundSAMLMessage(
+    outboundContext.setMessage(
         makeArtifactResolve(sharedData.getLocalEntityId(), new DateTime(), artifact));
 
     // Encode the request.
-    HttpExchange exchange
-        = HttpClientUtil.postExchange(new URL(context.getPeerEntityEndpoint().getLocation()), null);
+    HttpExchange exchange =
+        HttpClientUtil.postExchange(
+            new URL(
+                outboundContext
+                    .getSubcontext(SAMLPeerEntityContext.class)
+                    .getSubcontext(SAMLEndpointContext.class)
+                    .getEndpoint()
+                    .getLocation()),
+            null);
     try {
-
-      HttpExchangeToOutTransport out = new HttpExchangeToOutTransport(exchange);
+      HttpExchangeToHttpServletResponse out = new HttpExchangeToHttpServletResponse(exchange);
       try {
-        context.setOutboundMessageTransport(out);
-        context.setRelayState(request.getParameter("RelayState"));
-        runEncoder(new HTTPSOAP11Encoder(), context, decorator);
+        HTTPSOAP11Encoder encoder = new HTTPSOAP11Encoder();
+        encoder.setHttpServletResponse(out);
+        SAMLBindingSupport.setRelayState(outboundContext, request.getParameter("RelayState"));
+        runEncoder(encoder, outboundContext, decorator);
       } finally {
         out.finish();
       }
@@ -541,21 +576,21 @@ public final class SamlAuthnClient {
         throw new IOException("Incorrect HTTP status: " + status);
       }
 
-      initializeSecurityPolicy(context,
-          getMandatoryIssuerRule(),
-          getXmlSignatureRule());
+      initializeSecurityPolicy(
+          inboundContext, getCheckMandatoryIssuerHandler(), getXmlSignatureHandler());
 
       // Decode the response.
-      context.setInboundMessageTransport(new HttpExchangeToInTransport(exchange));
-      runDecoder(new HTTPSOAP11Decoder(getBasicParserPool()), context, decorator,
-          ArtifactResponse.DEFAULT_ELEMENT_NAME);
-
+      HTTPSOAP11Decoder decoder = new HTTPSOAP11Decoder();
+      decoder.setHttpServletRequest(new HttpExchangeToHttpServletRequest(exchange));
+      decoder.setParserPool(getBasicParserPool());
+      runDecoder(decoder, inboundContext, decorator);
+      runInboundMessageHandlers(inboundContext);
     } finally {
       exchange.close();
     }
 
     // Return the decoded response.
-    ArtifactResponse artifactResponse = context.getInboundSAMLMessage();
+    ArtifactResponse artifactResponse = (ArtifactResponse) inboundContext.getMessage();
     if (artifactResponse == null) {
       throw new MessageDecodingException("Decoded SAML response is null");
     }
@@ -569,26 +604,33 @@ public final class SamlAuthnClient {
   /**
    * A tweaked redirect encoder that preserves query parameters from the endpoint URL.
    */
-  private static final class RedirectEncoder extends HTTPRedirectDeflateEncoder {
+  @VisibleForTesting
+  static final class RedirectEncoder extends HTTPRedirectDeflateEncoder {
 
     RedirectEncoder() {
       super();
     }
 
     @Override
-    protected String buildRedirectURL(@SuppressWarnings("rawtypes") SAMLMessageContext context,
-        String endpointUrl, String message)
+    protected String buildRedirectURL(
+        MessageContext<SAMLObject> context, String endpointUrl, String message)
         throws MessageEncodingException {
       String encodedUrl = super.buildRedirectURL(context, endpointUrl, message);
 
       // Get the query parameters from the endpoint URL.
-      List<Pair<String, String>> endpointParams = new URLBuilder(endpointUrl).getQueryParams();
+      List<Pair<String, String>> endpointParams = null;
+      URLBuilder builder = null;
+      try {
+        endpointParams = new URLBuilder(endpointUrl).getQueryParams();
+        builder = new URLBuilder(encodedUrl);
+      } catch (MalformedURLException e) {
+        throw new MessageEncodingException(e);
+      }
       if (endpointParams.isEmpty()) {
         // If none, we're finished.
         return encodedUrl;
       }
 
-      URLBuilder builder = new URLBuilder(encodedUrl);
       List<Pair<String, String>> samlParams = builder.getQueryParams();
 
       // Merge the endpoint params with the SAML params.

@@ -16,10 +16,9 @@
 package com.google.enterprise.secmgr.saml;
 
 import com.google.enterprise.secmgr.common.XmlUtil;
-
-import org.opensaml.common.impl.AbstractSAMLObjectUnmarshaller;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.io.UnmarshallingException;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.core.xml.io.UnmarshallingException;
+import org.opensaml.saml.common.AbstractSAMLObjectUnmarshaller;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Element;
 

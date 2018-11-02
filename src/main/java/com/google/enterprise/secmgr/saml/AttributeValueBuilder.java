@@ -14,8 +14,7 @@
 
 package com.google.enterprise.secmgr.saml;
 
-import org.opensaml.common.impl.AbstractSAMLObjectBuilder;
-import org.opensaml.saml2.core.AttributeValue;
+import org.opensaml.saml.common.AbstractSAMLObjectBuilder;
 
 // This class should be part of OpenSAML but is missing from there.
 public class AttributeValueBuilder

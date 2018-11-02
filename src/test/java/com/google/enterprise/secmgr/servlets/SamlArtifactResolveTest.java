@@ -25,7 +25,7 @@ import com.google.enterprise.secmgr.testing.SecurityManagerTestCase;
 import java.io.IOException;
 import javax.servlet.ServletException;
 import org.joda.time.DateTime;
-import org.opensaml.xml.io.MarshallingException;
+import org.opensaml.core.xml.io.MarshallingException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockServletConfig;
@@ -78,6 +78,7 @@ public class SamlArtifactResolveTest extends SecurityManagerTestCase {
         "  </soap11:Body>\n" +
         "</soap11:Envelope>\n";
     mockRequest.setContent(entity.getBytes(UTF_8));
+    mockRequest.setContentType("text/xml");
 
     samlArtifactResolveInstance.getArtifactMap().put(
         encodedArtifact,

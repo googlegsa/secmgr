@@ -41,13 +41,14 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 import javax.servlet.ServletException;
-import org.opensaml.xml.security.SecurityException;
+import org.opensaml.messaging.handler.MessageHandlerException;
 
 /**
  * Unit tests for {@link AuthzServlet}.
  */
 public class AuthzServletTest extends SecurityManagerTestCase {
   private static final String USERNAME = "fred";
+  private static final String REQUEST_CONTENT_TYPE = "text/xml";
 
   private final AuthnSessionManager sessionManager;
   private final MockIntegration integration;
@@ -84,8 +85,8 @@ public class AuthzServletTest extends SecurityManagerTestCase {
   interface TestRunner {
     public void initServlet(AuthorizationController controller)
         throws ServletException, IOException;
-    public void run(AuthzResult expected)
-        throws IOException, SecurityException;
+
+    public void run(AuthzResult expected) throws IOException, MessageHandlerException;
   }
 
   private final class LocalTestRunner implements TestRunner {    
@@ -113,33 +114,30 @@ public class AuthzServletTest extends SecurityManagerTestCase {
         "user1", AuthzRequest.Mode.ALL, ImmutableList.<String>of("http://xyz.com")));
     assertEquals(AuthzStatus.PERMIT, resources.get(0).getPriorAclDecision());
   }
-  
-  public void testAllowAll()
-      throws ServletException, IOException, SecurityException {
+
+  public void testAllowAll() throws ServletException, IOException, MessageHandlerException {
     integration.setTestName();
     runTestAllowAll(testRunner);
   }
 
-  public void testAllowNone()
-      throws ServletException, IOException, SecurityException {
+  public void testAllowNone() throws ServletException, IOException, MessageHandlerException {
     integration.setTestName();
     runTestAllowNone(testRunner);
   }
 
   public void testAlwaysIndeterminate()
-      throws ServletException, IOException, SecurityException {
+      throws ServletException, IOException, MessageHandlerException {
     integration.setTestName();
     runTestAlwaysIndeterminate(testRunner);
   }
 
-  public void testAllowBySubstring()
-      throws ServletException, IOException, SecurityException {
+  public void testAllowBySubstring() throws ServletException, IOException, MessageHandlerException {
     integration.setTestName();
     runTestAllowBySubstring(testRunner);
   }
 
   static void runTestAllowAll(TestRunner runner)
-      throws ServletException, IOException, SecurityException {
+      throws ServletException, IOException, MessageHandlerException {
     runner.initServlet(ALLOW_ALL);
     runner.run(
         AuthzResult.of(
@@ -149,7 +147,7 @@ public class AuthzServletTest extends SecurityManagerTestCase {
   }
 
   static void runTestAllowNone(TestRunner runner)
-      throws ServletException, IOException, SecurityException {
+      throws ServletException, IOException, MessageHandlerException {
     runner.initServlet(ALLOW_NONE);
     runner.run(
         AuthzResult.of(
@@ -159,7 +157,7 @@ public class AuthzServletTest extends SecurityManagerTestCase {
   }
 
   static void runTestAlwaysIndeterminate(TestRunner runner)
-      throws ServletException, IOException, SecurityException {
+      throws ServletException, IOException, MessageHandlerException {
     runner.initServlet(ALWAYS_INDETERMINATE);
     runner.run(
         AuthzResult.of(
@@ -169,7 +167,7 @@ public class AuthzServletTest extends SecurityManagerTestCase {
   }
 
   static void runTestAllowBySubstring(TestRunner runner)
-      throws ServletException, IOException, SecurityException {
+      throws ServletException, IOException, MessageHandlerException {
     runner.initServlet(ALLOW_BY_SUBSTRING);
     runner.run(
         AuthzResult.of(
@@ -235,14 +233,16 @@ public class AuthzServletTest extends SecurityManagerTestCase {
     };
 
   static ProtoBufferClient<AuthzRequest, AuthzResponse> makeAuthzClient() {
-    return HttpProtoBufferClient.make(-1,
+    return HttpProtoBufferClient.make(
+        -1,
         new Supplier<Message.Builder>() {
           @Override
           public Message.Builder get() {
             return AuthzResponse.newBuilder();
           }
         },
-        AuthzResponse.class);
+        AuthzResponse.class,
+        REQUEST_CONTENT_TYPE);
   }
 
   static AuthzResult callAuthzServlet(ProtoBufferClient<AuthzRequest, AuthzResponse> client,

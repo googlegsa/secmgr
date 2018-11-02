@@ -15,9 +15,9 @@
  */
 package com.google.enterprise.secmgr.saml;
 
-import org.opensaml.common.impl.AbstractSAMLObjectMarshaller;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.util.XMLHelper;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.core.xml.util.XMLObjectSupport;
+import org.opensaml.saml.common.AbstractSAMLObjectMarshaller;
 import org.w3c.dom.Element;
 
 /** A marshaller (object to XML converter) for {@link SecmgrCredential}. */
@@ -25,17 +25,17 @@ final class SecmgrCredentialMarshaller extends AbstractSAMLObjectMarshaller {
   @Override
   protected void marshallAttributes(XMLObject xmlObject, Element domElement) {
     SecmgrCredential object = (SecmgrCredential) xmlObject;
-    XMLHelper.marshallAttribute(SecmgrCredential.NAME_ATTRIB_NAME, object.getName(),
-        domElement, false);
-    XMLHelper.marshallAttribute(SecmgrCredential.NAMESPACE_ATTRIB_NAME, object.getNamespace(),
-        domElement, false);
+    XMLObjectSupport.marshallAttribute(
+        SecmgrCredential.NAME_ATTRIB_NAME, object.getName(), domElement, false);
+    XMLObjectSupport.marshallAttribute(
+        SecmgrCredential.NAMESPACE_ATTRIB_NAME, object.getNamespace(), domElement, false);
     if (object.getDomain() != null) {
-      XMLHelper.marshallAttribute(SecmgrCredential.DOMAIN_ATTRIB_NAME, object.getDomain(),
-          domElement, false);
+      XMLObjectSupport.marshallAttribute(
+          SecmgrCredential.DOMAIN_ATTRIB_NAME, object.getDomain(), domElement, false);
     }
     if (object.getPassword() != null) {
-      XMLHelper.marshallAttribute(SecmgrCredential.PASSWORD_ATTRIB_NAME, object.getPassword(),
-          domElement, false);
+      XMLObjectSupport.marshallAttribute(
+          SecmgrCredential.PASSWORD_ATTRIB_NAME, object.getPassword(), domElement, false);
     }
   }
 }

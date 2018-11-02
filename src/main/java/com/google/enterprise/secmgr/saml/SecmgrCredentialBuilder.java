@@ -15,7 +15,7 @@
  */
 package com.google.enterprise.secmgr.saml;
 
-import org.opensaml.common.impl.AbstractSAMLObjectBuilder;
+import org.opensaml.saml.common.AbstractSAMLObjectBuilder;
 
 /** A factory for {@link SecmgrCredential}. */
 final class SecmgrCredentialBuilder extends AbstractSAMLObjectBuilder<SecmgrCredential> {

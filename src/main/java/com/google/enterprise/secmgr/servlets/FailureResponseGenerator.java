@@ -17,13 +17,11 @@ package com.google.enterprise.secmgr.servlets;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeResponse;
 
 import com.google.enterprise.secmgr.authncontroller.SessionSnapshot;
-
-import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.AuthnRequest;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.Response;
-import org.opensaml.saml2.core.Status;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.saml.common.SAMLObject;
+import org.opensaml.saml.saml2.core.Assertion;
+import org.opensaml.saml.saml2.core.Response;
+import org.opensaml.saml.saml2.core.Status;
 
 /**
  * This is an implementation of a response generator for unsuccessful responses.
@@ -32,8 +30,7 @@ public class FailureResponseGenerator extends SimpleResponseGenerator {
 
   private final Status status;
 
-  public FailureResponseGenerator(SAMLMessageContext<AuthnRequest, Response, NameID> context,
-      Status status) {
+  public FailureResponseGenerator(MessageContext<SAMLObject> context, Status status) {
     super(context);
     this.status = status;
   }

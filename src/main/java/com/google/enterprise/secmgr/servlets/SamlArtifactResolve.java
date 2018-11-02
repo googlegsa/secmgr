@@ -15,8 +15,8 @@
 package com.google.enterprise.secmgr.servlets;
 
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getBasicParserPool;
-import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getMandatoryIssuerRule;
-import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getXmlSignatureRule;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getCheckMandatoryIssuerHandler;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getXmlSignatureHandler;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.initializeSecurityPolicy;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeArtifactResponse;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeStatus;
@@ -25,38 +25,35 @@ import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeStatusMessage;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeSuccessfulStatus;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.runDecoder;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.runEncoder;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.runInboundMessageHandlers;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.enterprise.secmgr.common.Decorator;
 import com.google.enterprise.secmgr.common.PostableHttpServlet;
 import com.google.enterprise.secmgr.saml.SamlSharedData;
 import com.google.inject.Singleton;
-
-import org.joda.time.DateTime;
-import org.opensaml.common.SAMLObject;
-import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.common.binding.artifact.SAMLArtifactMap;
-import org.opensaml.common.binding.artifact.SAMLArtifactMap.SAMLArtifactMapEntry;
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.binding.decoding.HTTPSOAP11Decoder;
-import org.opensaml.saml2.binding.encoding.HTTPSOAP11Encoder;
-import org.opensaml.saml2.core.ArtifactResolve;
-import org.opensaml.saml2.core.ArtifactResponse;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.Status;
-import org.opensaml.saml2.core.StatusCode;
-import org.opensaml.saml2.metadata.Endpoint;
-import org.opensaml.ws.transport.http.HttpServletRequestAdapter;
-import org.opensaml.ws.transport.http.HttpServletResponseAdapter;
-import org.opensaml.xml.security.SecurityException;
-
 import java.io.IOException;
 import java.util.logging.Logger;
-
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.joda.time.DateTime;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.messaging.handler.MessageHandlerException;
+import org.opensaml.saml.common.SAMLObject;
+import org.opensaml.saml.common.binding.artifact.SAMLArtifactMap;
+import org.opensaml.saml.common.binding.artifact.SAMLArtifactMap.SAMLArtifactMapEntry;
+import org.opensaml.saml.common.messaging.context.SAMLPeerEntityContext;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.saml2.binding.decoding.impl.HTTPSOAP11Decoder;
+import org.opensaml.saml.saml2.binding.encoding.impl.HTTPSOAP11Encoder;
+import org.opensaml.saml.saml2.core.ArtifactResolve;
+import org.opensaml.saml.saml2.core.ArtifactResponse;
+import org.opensaml.saml.saml2.core.Status;
+import org.opensaml.saml.saml2.core.StatusCode;
+import org.opensaml.saml.saml2.metadata.AssertionConsumerService;
+import org.opensaml.soap.messaging.context.SOAP11Context;
 
 /**
  * Servlet to handle SAML artifact-resolution requests.  This is one part of the security manager's
@@ -85,30 +82,29 @@ public class SamlArtifactResolve extends SamlServlet implements PostableHttpServ
     logger.info(decorator.apply("Enter artifact resolver"));
 
     // Establish the SAML message context.
-    SAMLMessageContext<ArtifactResolve, ArtifactResponse, NameID> context
-        = makeSamlMessageContext(req);
+    MessageContext<SAMLObject> context = makeSamlMessageContext(req);
 
     Status status = null;
     SAMLObject responseObject = null;
 
-    initializeSecurityPolicy(context,
-        getMandatoryIssuerRule(),
-        getXmlSignatureRule());
+    initializeSecurityPolicy(context, getCheckMandatoryIssuerHandler(), getXmlSignatureHandler());
 
     // Decode the request.
-    context.setInboundMessageTransport(new HttpServletRequestAdapter(req));
+    HTTPSOAP11Decoder decoder = new HTTPSOAP11Decoder();
+    decoder.setHttpServletRequest(req);
+    decoder.setParserPool(getBasicParserPool());
     try {
-      runDecoder(new HTTPSOAP11Decoder(getBasicParserPool()), context, decorator,
-          ArtifactResolve.DEFAULT_ELEMENT_NAME);
-    } catch (SecurityException e) {
+      runDecoder(decoder, context, decorator);
+      initializePeerEntity(
+          context,
+          AssertionConsumerService.DEFAULT_ELEMENT_NAME,
+          SAMLConstants.SAML2_SOAP11_BINDING_URI);
+      runInboundMessageHandlers(context);
+    } catch (MessageHandlerException e) {
       logger.warning(decorator.apply("Security exception: " + e.getMessage()));
       status = makeFailureStatus("Unable to authenticate request");
     }
-    ArtifactResolve artifactResolve = context.getInboundSAMLMessage();
-
-    // Select entity for response.
-    initializePeerEntity(context, Endpoint.DEFAULT_ELEMENT_NAME,
-        SAMLConstants.SAML2_SOAP11_BINDING_URI);
+    ArtifactResolve artifactResolve = (ArtifactResolve) context.getMessage();
 
     // Any errors above will have set status, but if no errors, look up the
     // artifact and add any resulting object to response.
@@ -120,7 +116,10 @@ public class SamlArtifactResolve extends SamlServlet implements PostableHttpServ
         status = makeFailureStatus("Artifact unacceptable");
       } else {
         SAMLArtifactMapEntry entry = artifactMap.get(encodedArtifact);
-        String statusMessage = checkEntry(entry, context.getInboundMessageIssuer());
+        SAMLPeerEntityContext peerEntityContext =
+            context.getSubcontext(SAMLPeerEntityContext.class, false);
+        String statusMessage =
+            entry == null ? "Artifact expired" : checkEntry(entry, peerEntityContext.getEntityId());
         if (statusMessage == null) {
           logger.info(responseMessage("Artifact resolved", encodedArtifact, decorator));
           status = makeSuccessfulStatus();
@@ -134,23 +133,23 @@ public class SamlArtifactResolve extends SamlServlet implements PostableHttpServ
       }
     }
 
+    // Remove incoming SOAP Envelope
+    context.removeSubcontext(SOAP11Context.class);
     ArtifactResponse artifactResponse =
         makeArtifactResponse(getLocalEntityId(), new DateTime(), status, artifactResolve.getID(),
             responseObject);
 
     // Encode response.
-    context.setOutboundSAMLMessage(artifactResponse);
+    context.setMessage(artifactResponse);
     initResponse(resp);
-    context.setOutboundMessageTransport(new HttpServletResponseAdapter(resp, true));
-    runEncoder(new HTTPSOAP11Encoder(), context, decorator);
+    HTTPSOAP11Encoder encoder = new HTTPSOAP11Encoder();
+    encoder.setHttpServletResponse(resp);
+    runEncoder(encoder, context, decorator);
 
     logger.info(decorator.apply("Exit artifact resolver"));
   }
 
   private String checkEntry(SAMLArtifactMapEntry entry, String peerEntityId) {
-    if (entry.isExpired()) {
-      return "Artifact expired";
-    }
     if (!getLocalEntityId().equals(entry.getIssuerId())) {
       return "Artifact not issued by this entity";
     }
@@ -162,8 +161,7 @@ public class SamlArtifactResolve extends SamlServlet implements PostableHttpServ
 
   private static Status makeFailureStatus(String message) {
     return makeStatus(
-        makeStatusCode(StatusCode.SUCCESS_URI, StatusCode.REQUEST_DENIED_URI),
-        makeStatusMessage(message));
+        makeStatusCode(StatusCode.SUCCESS, StatusCode.REQUEST_DENIED), makeStatusMessage(message));
   }
 
   private static Decorator getLogDecorator(final HttpServletRequest request) {

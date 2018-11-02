@@ -14,11 +14,10 @@
 
 package com.google.enterprise.secmgr.saml;
 
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.xml.AbstractExtensibleXMLObject;
-
 import javax.xml.XMLConstants;
 import javax.xml.namespace.QName;
+import org.opensaml.core.xml.AbstractExtensibleXMLObject;
+import org.opensaml.saml.common.xml.SAMLConstants;
 
 // This class should be part of OpenSAML but is missing from there.
 public class AttributeValueImpl

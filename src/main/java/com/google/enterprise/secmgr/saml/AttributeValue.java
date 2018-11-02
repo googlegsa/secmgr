@@ -14,9 +14,10 @@
 
 package com.google.enterprise.secmgr.saml;
 
-// This is a necessary extension of the OpenSAML AttributeValue element.
-public interface AttributeValue
-    extends org.opensaml.saml2.core.AttributeValue {
+/**
+ * This is a necessary extension of the OpenSAML AttributeValue element.
+ */
+public interface AttributeValue extends org.opensaml.saml.saml2.core.AttributeValue {
 
   /**
    * Set the content of the AttributeValue element.

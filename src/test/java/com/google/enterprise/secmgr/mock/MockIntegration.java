@@ -86,13 +86,13 @@ import junit.framework.AssertionFailedError;
 import org.apache.commons.text.StringEscapeUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeUtils;
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.metadata.Endpoint;
-import org.opensaml.saml2.metadata.EntityDescriptor;
-import org.opensaml.saml2.metadata.IDPSSODescriptor;
-import org.opensaml.saml2.metadata.PDPDescriptor;
-import org.opensaml.saml2.metadata.SPSSODescriptor;
-import org.opensaml.xml.security.SecurityException;
+import org.opensaml.messaging.handler.MessageHandlerException;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.saml2.metadata.Endpoint;
+import org.opensaml.saml.saml2.metadata.EntityDescriptor;
+import org.opensaml.saml.saml2.metadata.IDPSSODescriptor;
+import org.opensaml.saml.saml2.metadata.PDPDescriptor;
+import org.opensaml.saml.saml2.metadata.SPSSODescriptor;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -826,10 +826,7 @@ public class MockIntegration {
               cred,
               decorator, -1)
           .get(sampleUrl);
-    } catch (IOException e) {
-      failWithException(e);
-      return null;
-    } catch (SecurityException e) {
+    } catch (IOException | MessageHandlerException e) {
       failWithException(e);
       return null;
     }

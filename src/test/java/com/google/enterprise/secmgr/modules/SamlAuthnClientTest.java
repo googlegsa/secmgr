@@ -16,33 +16,36 @@ package com.google.enterprise.secmgr.modules;
 
 import static com.google.enterprise.secmgr.modules.SamlAuthnClient.verifySignatureBasedOnMetadataInternal;
 
+import com.google.enterprise.secmgr.modules.SamlAuthnClient.RedirectEncoder;
+import com.google.enterprise.secmgr.saml.OpenSamlUtil;
 import com.google.enterprise.secmgr.testing.SecurityManagerTestCase;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-import java.security.interfaces.RSAPrivateKey;
 import java.util.logging.Logger;
-import org.opensaml.DefaultBootstrap;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.Issuer;
-import org.opensaml.saml2.core.Response;
-import org.opensaml.saml2.metadata.provider.DOMMetadataProvider;
-import org.opensaml.xml.Configuration;
-import org.opensaml.xml.io.Marshaller;
-import org.opensaml.xml.io.MarshallerFactory;
-import org.opensaml.xml.io.Unmarshaller;
-import org.opensaml.xml.io.UnmarshallerFactory;
-import org.opensaml.xml.parse.BasicParserPool;
-import org.opensaml.xml.security.SecurityHelper;
-import org.opensaml.xml.security.credential.Credential;
-import org.opensaml.xml.signature.Signature;
-import org.opensaml.xml.signature.SignatureConstants;
-import org.opensaml.xml.signature.Signer;
-import org.opensaml.xml.util.XMLHelper;
+import net.shibboleth.utilities.java.support.xml.BasicParserPool;
+import net.shibboleth.utilities.java.support.xml.SerializeSupport;
+import org.opensaml.core.config.InitializationService;
+import org.opensaml.core.xml.config.XMLObjectProviderRegistrySupport;
+import org.opensaml.core.xml.io.Marshaller;
+import org.opensaml.core.xml.io.MarshallerFactory;
+import org.opensaml.core.xml.io.Unmarshaller;
+import org.opensaml.core.xml.io.UnmarshallerFactory;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.messaging.encoder.MessageEncodingException;
+import org.opensaml.saml.common.SAMLObject;
+import org.opensaml.saml.metadata.resolver.impl.DOMMetadataResolver;
+import org.opensaml.saml.saml2.core.Assertion;
+import org.opensaml.saml.saml2.core.Issuer;
+import org.opensaml.saml.saml2.core.Response;
+import org.opensaml.saml.saml2.core.impl.ArtifactResponseBuilder;
+import org.opensaml.security.credential.Credential;
+import org.opensaml.security.credential.CredentialSupport;
+import org.opensaml.xmlsec.signature.Signature;
+import org.opensaml.xmlsec.signature.support.SignatureConstants;
+import org.opensaml.xmlsec.signature.support.Signer;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -65,25 +68,27 @@ public class SamlAuthnClientTest extends SecurityManagerTestCase {
   private BasicParserPool parser;
   private MarshallerFactory marshallerFactory;
   private UnmarshallerFactory unmarshallerFactory;
-  private DOMMetadataProvider mdProvider;
+  private DOMMetadataResolver mdResolver;
 
   public SamlAuthnClientTest() throws Exception {
     // Since we don't use OpenSamlUtil here, we need to bootstrap OpenSaml library.
-    DefaultBootstrap.bootstrap();
+    InitializationService.initialize();
   }
 
   @Override
   public void setUp() throws Exception {
     super.setUp();
 
-    marshallerFactory = Configuration.getMarshallerFactory();
-    unmarshallerFactory = Configuration.getUnmarshallerFactory();
+    marshallerFactory = XMLObjectProviderRegistrySupport.getMarshallerFactory();
+    unmarshallerFactory = XMLObjectProviderRegistrySupport.getUnmarshallerFactory();
 
     parser = new BasicParserPool();
     parser.setNamespaceAware(true);
+    parser.initialize();
     InputStream in = new FileInputStream(getClass().getResource(METADATA_FILE).getFile());
-    mdProvider = new DOMMetadataProvider(parser.parse(in).getDocumentElement());
-    mdProvider.initialize();
+    mdResolver = new DOMMetadataResolver(parser.parse(in).getDocumentElement());
+    mdResolver.setId(getClass().getName());
+    mdResolver.initialize();
     in.close();
   }
 
@@ -98,9 +103,9 @@ public class SamlAuthnClientTest extends SecurityManagerTestCase {
     Marshaller marshaller = marshallerFactory.getMarshaller(Response.DEFAULT_ELEMENT_NAME);
     marshaller.marshall(resp);
     Signer.signObject(signature);
-    logger.info(XMLHelper.nodeToString(resp.getDOM()));
+    logger.info(SerializeSupport.nodeToString(resp.getDOM()));
 
-    assertEquals(true, verifySignatureBasedOnMetadataInternal(assertion, mdProvider));
+    assertTrue(verifySignatureBasedOnMetadataInternal(assertion, mdResolver));
   }
 
   public void testVerifyAssertionSignedByUntrustedIssuerFail() throws Exception {
@@ -114,18 +119,20 @@ public class SamlAuthnClientTest extends SecurityManagerTestCase {
     Marshaller marshaller = marshallerFactory.getMarshaller(Response.DEFAULT_ELEMENT_NAME);
     marshaller.marshall(resp);
     Signer.signObject(signature);
-    logger.info(XMLHelper.nodeToString(resp.getDOM()));
+    logger.info(SerializeSupport.nodeToString(resp.getDOM()));
 
-    assertEquals(false, verifySignatureBasedOnMetadataInternal(assertion, mdProvider));
+    assertFalse(verifySignatureBasedOnMetadataInternal(assertion, mdResolver));
   }
 
   public void testVerifyAssertionWithNonmatchingIssuer() throws Exception {
     Response resp = buildResponseFromFile();
     Assertion assertion = resp.getAssertions().get(0);
 
-    Issuer issuer = (Issuer) Configuration.getBuilderFactory()
-        .getBuilder(Issuer.DEFAULT_ELEMENT_NAME)
-        .buildObject(Issuer.DEFAULT_ELEMENT_NAME);
+    Issuer issuer =
+        (Issuer)
+            XMLObjectProviderRegistrySupport.getBuilderFactory()
+                .getBuilder(Issuer.DEFAULT_ELEMENT_NAME)
+                .buildObject(Issuer.DEFAULT_ELEMENT_NAME);
     issuer.setValue("nonmatching issuer");
     assertion.setIssuer(issuer);
 
@@ -136,15 +143,26 @@ public class SamlAuthnClientTest extends SecurityManagerTestCase {
     Marshaller marshaller = marshallerFactory.getMarshaller(Response.DEFAULT_ELEMENT_NAME);
     marshaller.marshall(resp);
     Signer.signObject(signature);
-    logger.info(XMLHelper.nodeToString(resp.getDOM()));
+    logger.info(SerializeSupport.nodeToString(resp.getDOM()));
 
-    assertEquals(false, verifySignatureBasedOnMetadataInternal(assertion, mdProvider));
+    assertFalse(verifySignatureBasedOnMetadataInternal(assertion, mdResolver));
   }
 
   public void testVerifyNoSignedAssertionFail() throws Exception {
     Response resp = buildResponseFromFile();
-    assertEquals(false,
-        verifySignatureBasedOnMetadataInternal(resp.getAssertions().get(0), mdProvider));
+    assertFalse(verifySignatureBasedOnMetadataInternal(resp.getAssertions().get(0), mdResolver));
+  }
+  
+  public void testRedirectEncoderWithMalformedURL() {
+    String url = "unkownproto://validhost.tld/path?queryA=b&queryB=c";
+    MessageContext<SAMLObject> context = new MessageContext<>();
+    context.setMessage(new ArtifactResponseBuilder().buildObject());
+    try {
+      new RedirectEncoder().buildRedirectURL(context, url, "msg");
+      fail();
+    } catch (MessageEncodingException e) {
+      // OK
+    }
   }
 
   private Response buildResponseFromFile() throws Exception {
@@ -159,9 +177,11 @@ public class SamlAuthnClientTest extends SecurityManagerTestCase {
   }
 
   private static Signature buildSignature(Credential signingCredential) {
-    Signature signature = (Signature) Configuration.getBuilderFactory()
-        .getBuilder(Signature.DEFAULT_ELEMENT_NAME)
-        .buildObject(Signature.DEFAULT_ELEMENT_NAME);
+    Signature signature =
+        (Signature)
+            XMLObjectProviderRegistrySupport.getBuilderFactory()
+                .getBuilder(Signature.DEFAULT_ELEMENT_NAME)
+                .buildObject(Signature.DEFAULT_ELEMENT_NAME);
 
     signature.setSigningCredential(signingCredential);
     signature.setSignatureAlgorithm(SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA1);
@@ -171,23 +191,10 @@ public class SamlAuthnClientTest extends SecurityManagerTestCase {
 
   private static Credential getX509CredentialHelper(String certFilename, String privKeyFilename)
       throws Exception {
-    X509Certificate cert = SecurityHelper.buildJavaX509Cert(
-        readPemFileAndRemoveBeginEnd(certFilename));
-    RSAPrivateKey privateKey = SecurityHelper.buildJavaRSAPrivateKey(
-        readPemFileAndRemoveBeginEnd(privKeyFilename));
-    return SecurityHelper.getSimpleCredential(cert, privateKey);
-  }
-
-  private static String readPemFileAndRemoveBeginEnd(String filename) throws Exception {
-    byte[] encoded =
-        Files.readAllBytes(Paths.get(SamlAuthnClientTest.class.getResource(filename).getFile()));
-    String str = new String(encoded, StandardCharsets.UTF_8);
-    str = str.replace("\n", "");
-    str = str.replace("-----BEGIN CERTIFICATE-----", "");
-    str = str.replace("-----END CERTIFICATE-----", "");
-    str = str.replace("-----BEGIN RSA PRIVATE KEY-----", "");
-    str = str.replace("-----END RSA PRIVATE KEY-----", "");
-    logger.info(str);
-    return str;
+    String certPath = SamlAuthnClientTest.class.getResource(certFilename).getFile();
+    String keyPath = SamlAuthnClientTest.class.getResource(privKeyFilename).getFile();
+    X509Certificate cert = OpenSamlUtil.readX509CertificateFile(new File(certPath));
+    PrivateKey privateKey = OpenSamlUtil.readPrivateKeyFile(new File(keyPath));
+    return CredentialSupport.getSimpleCredential(cert, privateKey);
   }
 }

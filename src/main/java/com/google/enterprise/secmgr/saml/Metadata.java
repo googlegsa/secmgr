@@ -26,17 +26,30 @@ import com.google.enterprise.secmgr.common.SecurityManagerUtil;
 import com.google.enterprise.secmgr.common.XmlUtil;
 import com.google.enterprise.secmgr.config.ConfigSingleton;
 import com.google.enterprise.util.C;
-
-import org.opensaml.saml2.metadata.EntitiesDescriptor;
-import org.opensaml.saml2.metadata.EntityDescriptor;
-import org.opensaml.saml2.metadata.provider.AbstractObservableMetadataProvider;
-import org.opensaml.saml2.metadata.provider.AbstractReloadingMetadataProvider;
-import org.opensaml.saml2.metadata.provider.MetadataProvider;
-import org.opensaml.saml2.metadata.provider.MetadataProviderException;
-import org.opensaml.saml2.metadata.provider.ObservableMetadataProvider;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.io.MarshallingException;
-import org.opensaml.xml.io.UnmarshallingException;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.logging.Logger;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
+import javax.annotation.concurrent.ThreadSafe;
+import javax.servlet.http.HttpServletRequest;
+import net.shibboleth.utilities.java.support.component.ComponentInitializationException;
+import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
+import net.shibboleth.utilities.java.support.resolver.ResolverException;
+import org.opensaml.core.criterion.EntityIdCriterion;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.core.xml.io.MarshallingException;
+import org.opensaml.core.xml.io.UnmarshallingException;
+import org.opensaml.messaging.context.BaseContext;
+import org.opensaml.saml.metadata.resolver.MetadataResolver;
+import org.opensaml.saml.metadata.resolver.RoleDescriptorResolver;
+import org.opensaml.saml.metadata.resolver.impl.AbstractReloadingMetadataResolver;
+import org.opensaml.saml.metadata.resolver.impl.FilesystemMetadataResolver;
+import org.opensaml.saml.metadata.resolver.impl.PredicateRoleDescriptorResolver;
+import org.opensaml.saml.saml2.metadata.EntityDescriptor;
 import org.w3c.dom.CDATASection;
 import org.w3c.dom.Comment;
 import org.w3c.dom.Document;
@@ -46,16 +59,6 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.ProcessingInstruction;
 import org.w3c.dom.Text;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.logging.Logger;
-
-import javax.annotation.concurrent.GuardedBy;
-import javax.annotation.concurrent.ThreadSafe;
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * An abstract interface to the SAML metadata configuration.  Tracks a given
@@ -93,7 +96,7 @@ public class Metadata {
                 }
               }));
 
-  private final MyProvider provider;
+  private final FilesystemMetadataResolver resolver;
 
   // TODO: refactor this to use a base URI and resolve the partial URI
   // string in the metadata with respect to this base URI.  For example, a
@@ -101,10 +104,11 @@ public class Metadata {
   // baseUri.resolve("foo/bar") after the boilerplate was stripped out.
   private Metadata(String urlPrefix) {
     try {
-      provider = new MyProvider(OpenSamlUtil.getMetadataFromFile(getMetadataFile()), urlPrefix,
-          SecurityManagerUtil.getConfiguredEntityId());
-      provider.initialize();
-    } catch (MetadataProviderException e) {
+      resolver =
+          OpenSamlUtil.getMetadataFromFile(
+              getMetadataFile(), urlPrefix, SecurityManagerUtil.getConfiguredEntityId());
+      resolver.initialize();
+    } catch (ResolverException | ComponentInitializationException e) {
       throw new LocalExceptionTunnel(new IOException(e));
     }
   }
@@ -173,63 +177,42 @@ public class Metadata {
     return getInstance("http://" + securityManagerHost);
   }
 
-  /**
-   * Forces refresh of cached metadata.
-   */
-  @VisibleForTesting
-  void refresh()
-      throws IOException {
-    try {
-      provider.refresh();
-    } catch (MetadataProviderException e) {
-      throw new IOException(e);
-    }
-  }
-
   private static Metadata getInstance(String urlPrefix)
       throws IOException {
     try {
-      return CACHE.apply(urlPrefix);
+      return CACHE.getUnchecked(urlPrefix);
     } catch (LocalExceptionTunnel e) {
       throw e.getException();
     }
   }
 
-  public MetadataProvider getProvider() {
-    return provider;
+  public MetadataResolver getResolver() {
+    return resolver;
   }
 
-  public EntitiesDescriptor getMetadata()
-      throws IOException {
-    XMLObject root;
-    try {
-      root = provider.getMetadata();
-    } catch (MetadataProviderException e) {
-      throw new IOException(e);
-    }
-    if (root instanceof EntitiesDescriptor) {
-      return (EntitiesDescriptor) root;
-    }
-    throw new IOException("Malformed SAML metadata");
+  public RoleDescriptorResolver getRoleDescriptorResolver() {
+    return new PredicateRoleDescriptorResolver(resolver);
   }
 
   public EntityDescriptor getEntity(String id)
       throws IOException {
-    return getEntity(id, provider);
+    return getEntity(id, resolver);
   }
 
-  public static EntityDescriptor getEntity(String id, MetadataProvider provider)
+  public static EntityDescriptor getEntity(String id, MetadataResolver resolver)
       throws IOException {
-    EntityDescriptor entity = findEntity(id, provider);
+    EntityDescriptor entity = findEntity(id, resolver);
     Preconditions.checkArgument(entity != null, "Unknown entity ID: %s", id);
     return entity;
   }
 
-  public static EntityDescriptor findEntity(String id, MetadataProvider provider)
+  public static EntityDescriptor findEntity(String entityID, MetadataResolver resolver)
       throws IOException {
     try {
-      return provider.getEntityDescriptor(id);
-    } catch (MetadataProviderException e) {
+      CriteriaSet criterion = new CriteriaSet();
+      criterion.add(new EntityIdCriterion(entityID));
+      return resolver.resolveSingle(criterion);
+    } catch (ResolverException e) {
       throw new IOException(e);
     }
   }
@@ -247,8 +230,7 @@ public class Metadata {
     }
   }
 
-  public EntityDescriptor getSmEntity()
-      throws IOException {
+  public EntityDescriptor getSmEntity() throws IOException {
     return getEntityById(MetadataEditor.SECMGR_ID_FOR_ENTITY);
   }
 
@@ -260,83 +242,51 @@ public class Metadata {
     }
   }
 
-  private EntityDescriptor getEntityById(String id)
-      throws IOException {
-    for (EntityDescriptor e : getMetadata().getEntityDescriptors()) {
-      if (id.equals(e.getID())) {
-        return e;
+  /** Forces refresh of cached metadata. */
+  @VisibleForTesting
+  void refresh() throws IOException {
+    try {
+      resolver.refresh();
+    } catch (ResolverException e) {
+      throw new IOException(e);
+    }
+  }
+
+  private EntityDescriptor getEntityById(String id) throws IOException {
+    try {
+      CriteriaSet criteria = new CriteriaSet();
+      criteria.add(new IdEvaluableEntityDescriptorCriterion(id));
+      for (EntityDescriptor e : resolver.resolve(criteria)) {
+        if (id.equals(e.getID())) {
+          return e;
+        }
       }
+    } catch (ResolverException e) {
+      throw new IOException("Exception while resolving metadata with id: " + id, e);
     }
     throw new IllegalStateException("Can't find entity descriptor with id: " + id);
   }
 
   /**
-   * This class implements a wrapper around an OpenSAML
-   * ObservableMetadataProvider that customizes the metadata for a particular
-   * host.  When the metadata is updated, as when the configuration file is
-   * changed, this provider notices that, gets the updated metadata, and
-   * customizes it.  To speed things up a bit, the customized metadata is
-   * cached, so it need not be customized every time.
+   * This class extends FilesystemMetadataResolver and overrides the unmarshaller methods to
+   * customize the metadata for a particular host.
    */
-  private static class MyProvider
-      extends AbstractObservableMetadataProvider
-      implements ObservableMetadataProvider.Observer {
+  static class GsaFilesystemMetadataResolver extends FilesystemMetadataResolver {
 
-    final AbstractReloadingMetadataProvider wrappedProvider;
     final String urlPrefix;
     final String configuredEntityId;
-    XMLObject savedMetadata;
 
-    MyProvider(AbstractReloadingMetadataProvider wrappedProvider, String urlPrefix,
-        String configuredEntityId) {
-      super();
-      this.wrappedProvider = wrappedProvider;
+    GsaFilesystemMetadataResolver(File metadataFile, String urlPrefix, String configuredEntityId)
+        throws ResolverException {
+      super(metadataFile);
       this.urlPrefix = urlPrefix;
       this.configuredEntityId = configuredEntityId;
-      savedMetadata = null;
-
-      wrappedProvider.getObservers().add(this);
     }
 
     @Override
-    public synchronized void onEvent(MetadataProvider provider) {
-      logger.info("Clearing cached metadata");
-      savedMetadata = null;
-      emitChangeEvent();
-    }
-
-    @Override
-    public void doInitialization()
-        throws MetadataProviderException {
-      wrappedProvider.initialize();
-    }
-
-    @Override
-    public synchronized XMLObject doGetMetadata()
-        throws MetadataProviderException {
-      // This will call onEvent if the file has changed:
-      XMLObject rawMetadata = wrappedProvider.getMetadata();
-      if (savedMetadata == null) {
-        try {
-          savedMetadata = OpenSamlUtil.unmarshallXmlObject(
-              substituteTopLevel(
-                  OpenSamlUtil.marshallXmlObject(rawMetadata)));
-        } catch (MarshallingException e) {
-          throw new MetadataProviderException(e);
-        } catch (UnmarshallingException e) {
-          throw new MetadataProviderException(e);
-        }
-      }
-      return savedMetadata;
-    }
-
-    /**
-     * Forces refresh of cached metadata.
-     */
-    @VisibleForTesting
-    synchronized void refresh()
-        throws MetadataProviderException {
-      wrappedProvider.refresh();
+    @Nullable
+    public String getId() {
+      return getClass().getName() + "-" + urlPrefix + "-" + configuredEntityId;
     }
 
     Element substituteTopLevel(Element element) {
@@ -419,6 +369,37 @@ public class Metadata {
       }
 
       return original;
+    }
+
+    /**
+     * Overrides {@link AbstractReloadingMetadataResolver#unmarshallMetadata}, replaces template
+     * entries with actual data in metadata xml files.
+     */
+    @Override
+    protected XMLObject unmarshallMetadata(final byte[] metadataBytes) throws ResolverException {
+      try {
+        XMLObject rawMetadata = super.unmarshallMetadata(new ByteArrayInputStream(metadataBytes));
+        return OpenSamlUtil.unmarshallXmlObject(
+            substituteTopLevel(OpenSamlUtil.marshallXmlObject(rawMetadata)));
+      } catch (final UnmarshallingException | MarshallingException e) {
+        final String errorMsg = "Unable to customize metadata";
+        logger.warning(errorMsg);
+        throw new ResolverException(errorMsg, e);
+      }
+    }
+  }
+
+  /** A custom message context to hold an instance of this class */
+  public static class MetadataContext extends BaseContext {
+
+    @Nullable private transient Metadata metadata;
+
+    public Metadata getMetadata() {
+      return metadata;
+    }
+
+    public void setMetadata(Metadata metadata) {
+      this.metadata = metadata;
     }
   }
 }

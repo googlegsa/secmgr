@@ -17,13 +17,10 @@ package com.google.enterprise.secmgr.saml;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-
-import org.opensaml.common.impl.AbstractSAMLObject;
-import org.opensaml.xml.XMLObject;
-
 import java.util.List;
-
 import javax.annotation.ParametersAreNonnullByDefault;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.saml.common.AbstractSAMLObject;
 
 /** An implementation for {@link Group}. */
 @ParametersAreNonnullByDefault

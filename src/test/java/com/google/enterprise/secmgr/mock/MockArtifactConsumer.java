@@ -33,13 +33,12 @@ import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.AuthnStatement;
-import org.opensaml.saml2.core.Response;
-import org.opensaml.saml2.core.Status;
-import org.opensaml.ws.transport.http.HttpServletResponseAdapter;
-import org.opensaml.xml.security.SecurityException;
+import org.opensaml.messaging.handler.MessageHandlerException;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.saml2.core.Assertion;
+import org.opensaml.saml.saml2.core.AuthnStatement;
+import org.opensaml.saml.saml2.core.Response;
+import org.opensaml.saml.saml2.core.Status;
 
 /**
  * The MockArtifactConsumer class implements a servlet pretending to be the part of a SAML Service
@@ -68,12 +67,12 @@ public class MockArtifactConsumer extends SamlServlet implements GettableHttpSer
 
     // Always respond with redirect.
     initResponse(resp);
-    (new HttpServletResponseAdapter(resp, true)).sendRedirect(req.getParameter("RelayState"));
+    resp.sendRedirect(req.getParameter("RelayState"));
 
     Response response;
     try {
       response = client.decodeResponse(req, SAMLConstants.SAML2_ARTIFACT_BINDING_URI);
-    } catch (SecurityException e) {
+    } catch (MessageHandlerException e) {
       LOGGER.log(Level.WARNING, decorator.apply("ArtifactResponse failed authentication: "), e);
       session.setAttribute("isAuthenticated", "no");
       return;

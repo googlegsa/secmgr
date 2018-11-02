@@ -14,8 +14,6 @@
 
 package com.google.enterprise.secmgr.mock;
 
-import static junit.framework.Assert.assertEquals;
-
 import com.google.enterprise.secmgr.authzcontroller.Authorizer;
 import com.google.enterprise.secmgr.common.PostableHttpServlet;
 import com.google.enterprise.secmgr.common.Resource;
@@ -31,8 +29,9 @@ import java.util.Collection;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.opensaml.xml.io.MarshallingException;
-import org.opensaml.xml.util.XMLHelper;
+import org.custommonkey.xmlunit.XMLAssert;
+import org.custommonkey.xmlunit.XMLUnit;
+import org.opensaml.core.xml.io.MarshallingException;
 
 /**
  * A mock implementation of a SAML Policy Decision Point.
@@ -57,14 +56,11 @@ public class MockSamlPdp extends SamlServlet implements PostableHttpServlet {
     SecmgrCredential actualCred = decodedRequest.getCredential();
 
     try {
-      // we have to compare the string representation here because we can not override
-      // SecmgrCredentialImpl#equals method. The equals method is marked as final by its parent
-      // class org.opensaml.common.impl.AbstractSAMLObject.
-      String expectedCredStr = XMLHelper.prettyPrintXML(
-          OpenSamlUtil.marshallXmlObject(expectedCred));
-      String actualCredStr = XMLHelper.prettyPrintXML(
-          OpenSamlUtil.marshallXmlObject(actualCred));
-      assertEquals(expectedCredStr, actualCredStr);
+      XMLUnit.setIgnoreWhitespace(true);
+      XMLUnit.setIgnoreAttributeOrder(true);
+      XMLAssert.assertXMLEqual(
+          OpenSamlUtil.marshallXmlObject(expectedCred).getOwnerDocument(),
+          OpenSamlUtil.marshallXmlObject(actualCred).getOwnerDocument());
     } catch (MarshallingException e) {
       throw new IOException(e);
     }

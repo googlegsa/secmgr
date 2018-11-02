@@ -25,11 +25,11 @@ import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.opensaml.xml.security.CriteriaSet;
-import org.opensaml.xml.security.SecurityException;
-import org.opensaml.xml.security.credential.Credential;
-import org.opensaml.xml.security.criteria.EntityIDCriteria;
-import org.opensaml.xml.security.x509.X509Credential;
+import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
+import net.shibboleth.utilities.java.support.resolver.ResolverException;
+import org.opensaml.core.criterion.EntityIdCriterion;
+import org.opensaml.security.credential.Credential;
+import org.opensaml.security.x509.X509Credential;
 
 /**
  * Unit tests for {@link CacertsCredentialResolver}.
@@ -51,11 +51,10 @@ public class CacertsCredentialResolverTest extends SecurityManagerTestCase {
   public CacertsCredentialResolverTest()
       throws IOException, GeneralSecurityException {
     resolver = CacertsCredentialResolver.make(ConfigSingleton.getCacertsTrustStore());
-    criteriaSet = new CriteriaSet(new EntityIDCriteria("dummyentityid"));
+    criteriaSet = new CriteriaSet(new EntityIdCriterion("dummyentityid"));
   }
 
-  public void testSimple()
-      throws SecurityException {
+  public void testSimple() throws ResolverException {
     ImmutableSet<String> certNames
         = ImmutableSet.copyOf(
             Iterables.transform(resolver.resolve(criteriaSet),

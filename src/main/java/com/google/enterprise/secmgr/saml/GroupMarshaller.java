@@ -15,9 +15,9 @@
  */
 package com.google.enterprise.secmgr.saml;
 
-import org.opensaml.common.impl.AbstractSAMLObjectMarshaller;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.util.XMLHelper;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.core.xml.util.XMLObjectSupport;
+import org.opensaml.saml.common.AbstractSAMLObjectMarshaller;
 import org.w3c.dom.Element;
 
 /** A marshaller (object to XML converter) for {@link Group}. */
@@ -25,11 +25,12 @@ final class GroupMarshaller extends AbstractSAMLObjectMarshaller {
   @Override
   protected void marshallAttributes(XMLObject xmlObject, Element domElement) {
     Group object = (Group) xmlObject;
-    XMLHelper.marshallAttribute(Group.NAME_ATTRIB_NAME, object.getName(), domElement, false);
-    XMLHelper.marshallAttribute(Group.NAMESPACE_ATTRIB_NAME, object.getNamespace(),
-        domElement, false);
+    XMLObjectSupport.marshallAttribute(Group.NAME_ATTRIB_NAME, object.getName(), domElement, false);
+    XMLObjectSupport.marshallAttribute(
+        Group.NAMESPACE_ATTRIB_NAME, object.getNamespace(), domElement, false);
     if (object.getDomain() != null) {
-      XMLHelper.marshallAttribute(Group.DOMAIN_ATTRIB_NAME, object.getDomain(), domElement, false);
+      XMLObjectSupport.marshallAttribute(
+          Group.DOMAIN_ATTRIB_NAME, object.getDomain(), domElement, false);
     }
   }
 }

@@ -49,7 +49,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 import javax.servlet.ServletException;
 import org.joda.time.DateTimeUtils;
-import org.opensaml.xml.security.SecurityException;
+import org.opensaml.messaging.handler.MessageHandlerException;
 
 /**
  * Unit tests for {@link SamlAuthz}.
@@ -113,8 +113,7 @@ public class SamlAuthzTest extends SecurityManagerTestCase {
     }
 
     @Override
-    public void run(AuthzResult expected)
-        throws IOException, SecurityException {
+    public void run(AuthzResult expected) throws IOException, MessageHandlerException {
       for (SamlAuthzClient.Protocol protocol : SamlAuthzClient.Protocol.values()) {
         SecmgrCredential cred = OpenSamlUtil.makeSecmgrCredential(sessionId, "", "", "",
             Collections.<Group>emptyList());
@@ -125,26 +124,23 @@ public class SamlAuthzTest extends SecurityManagerTestCase {
     }
   }
 
-  public void testAllowAll()
-      throws ServletException, IOException, SecurityException {
+  public void testAllowAll() throws ServletException, IOException, MessageHandlerException {
     integration.setTestName();
     AuthzServletTest.runTestAllowAll(testRunner);
   }
 
-  public void testAllowNone()
-      throws ServletException, IOException, SecurityException {
+  public void testAllowNone() throws ServletException, IOException, MessageHandlerException {
     integration.setTestName();
     AuthzServletTest.runTestAllowNone(testRunner);
   }
 
   public void testAlwaysIndeterminate()
-      throws ServletException, IOException, SecurityException {
+      throws ServletException, IOException, MessageHandlerException {
     integration.setTestName();
     AuthzServletTest.runTestAlwaysIndeterminate(testRunner);
   }
 
-  public void testAllowBySubstring()
-      throws ServletException, IOException, SecurityException {
+  public void testAllowBySubstring() throws ServletException, IOException, MessageHandlerException {
     integration.setTestName();
     AuthzServletTest.runTestAllowBySubstring(testRunner);
   }
@@ -252,7 +248,7 @@ public class SamlAuthzTest extends SecurityManagerTestCase {
   private double timeAuthzRequest(MockRelyingParty relyingParty, List<String> urls)
       throws IOException {
     long startTime = DateTimeUtils.currentTimeMillis();
-    AuthzResult authzResult = relyingParty.authorize(urls, integration.getSessionId());
+    relyingParty.authorize(urls, integration.getSessionId());
     return (DateTimeUtils.currentTimeMillis() - startTime) * 0.001;
   }
 
@@ -260,9 +256,8 @@ public class SamlAuthzTest extends SecurityManagerTestCase {
       List<String> identifiers)
       throws IOException {
     long startTime = DateTimeUtils.currentTimeMillis();
-    AuthzResult result
-        = AuthzServletTest.callAuthzServlet(client, authzServletUri, integration.getSessionId(),
-            AuthzRequest.Mode.FAST, identifiers);
+    AuthzServletTest.callAuthzServlet(
+        client, authzServletUri, integration.getSessionId(), AuthzRequest.Mode.FAST, identifiers);
     return (DateTimeUtils.currentTimeMillis() - startTime) * 0.001;
   }
 

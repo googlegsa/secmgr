@@ -37,9 +37,9 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.opensaml.saml2.metadata.Endpoint;
-import org.opensaml.saml2.metadata.EntityDescriptor;
-import org.opensaml.xml.XMLObject;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.saml.saml2.metadata.Endpoint;
+import org.opensaml.saml.saml2.metadata.EntityDescriptor;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockServletConfig;
@@ -237,6 +237,7 @@ public final class MockHttpTransport implements HttpTransport {
     responseActions.clear();
   }
 
+  @Override
   public void exchange(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     ExchangeLog exchangeLog = exchangeLogBuilder.push();

@@ -15,6 +15,8 @@
 package com.google.enterprise.secmgr.servlets;
 
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.BEARER_METHOD;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getMessageId;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getMessageIssuer;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAssertion;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAudienceRestriction;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeConditions;
@@ -24,17 +26,18 @@ import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeSubjectConfirma
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeSuccessfulStatus;
 
 import com.google.enterprise.secmgr.authncontroller.SessionSnapshot;
-
 import org.joda.time.DateTime;
-import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.AuthnRequest;
-import org.opensaml.saml2.core.AuthnStatement;
-import org.opensaml.saml2.core.Conditions;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.Response;
-import org.opensaml.saml2.core.Subject;
-import org.opensaml.saml2.core.SubjectConfirmation;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.saml.common.SAMLObject;
+import org.opensaml.saml.common.messaging.context.SAMLEndpointContext;
+import org.opensaml.saml.common.messaging.context.SAMLPeerEntityContext;
+import org.opensaml.saml.common.messaging.context.SAMLSelfEntityContext;
+import org.opensaml.saml.saml2.core.Assertion;
+import org.opensaml.saml.saml2.core.AuthnStatement;
+import org.opensaml.saml.saml2.core.Conditions;
+import org.opensaml.saml.saml2.core.Response;
+import org.opensaml.saml.saml2.core.Subject;
+import org.opensaml.saml.saml2.core.SubjectConfirmation;
 
 /**
  * This is an implementation of a response generator in which contextual
@@ -49,16 +52,21 @@ public class SimpleResponseGenerator extends ResponseGenerator {
   protected final String issuer;
 
   /**
-   * Make a new ResponseGenerator instance.  Accepts the contextual information
-   * as an OpenSAML message context.
+   * Make a new ResponseGenerator instance. Accepts the contextual information as an OpenSAML
+   * message context.
    *
    * @param context A properly-initialize OpenSAML message context.
    */
-  public SimpleResponseGenerator(SAMLMessageContext<AuthnRequest, Response, NameID> context) {
-    this(context.getPeerEntityEndpoint().getLocation(),
-        context.getInboundMessageIssuer(),
-        context.getInboundSAMLMessage().getID(),
-        context.getLocalEntityId());
+  public SimpleResponseGenerator(MessageContext<SAMLObject> context) {
+    this(
+        context
+            .getSubcontext(SAMLPeerEntityContext.class)
+            .getSubcontext(SAMLEndpointContext.class)
+            .getEndpoint()
+            .getLocation(),
+        getMessageIssuer(context).getValue(),
+        getMessageId(context),
+        context.getSubcontext(SAMLSelfEntityContext.class).getEntityId());
   }
 
   /**

@@ -28,7 +28,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.opensaml.xml.security.SecurityException;
+import org.opensaml.messaging.handler.MessageHandlerException;
 
 /**
  * A mock of a SAML "relying party" client.
@@ -64,7 +64,7 @@ public final class MockRelyingParty {
       SecmgrCredential cred = OpenSamlUtil.makeSecmgrCredential(username, "", "", "",
           Collections.<Group>emptyList());
       return samlClient.sendAuthzRequest(protocol, urls, cred, useFastAuthz, decorator, -1);
-    } catch (SecurityException e) {
+    } catch (MessageHandlerException e) {
       logger.log(Level.WARNING, decorator.apply("Authorization response failed: "), e);
       return AuthzResult.makeIndeterminate(urls);
     }
