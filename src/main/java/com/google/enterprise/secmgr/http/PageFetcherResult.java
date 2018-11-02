@@ -435,8 +435,8 @@ public class PageFetcherResult {
    */
   public VerificationStatus getVerificationStatus() {
     DenyRule rule = getDenyRule();
-    if (rule != null) {
-      return evaluateDenyRule(rule) ? VerificationStatus.REFUTED : VerificationStatus.VERIFIED;
+    if (rule != null && evaluateDenyRule(rule)) {
+      return VerificationStatus.REFUTED;
     }
     switch (statusCode) {
       case HttpServletResponse.SC_OK:
@@ -465,8 +465,8 @@ public class PageFetcherResult {
    */
   public AuthzStatus getAuthzStatus() {
     DenyRule rule = getDenyRule();
-    if (rule != null) {
-      return evaluateDenyRule(rule) ? AuthzStatus.DENY : AuthzStatus.PERMIT;
+    if (rule != null && evaluateDenyRule(rule)) {
+      return AuthzStatus.DENY;
     }
     switch (statusCode) {
       case HttpServletResponse.SC_OK:
