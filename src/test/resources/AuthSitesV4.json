@@ -1,0 +1,28 @@
+{"version": 4,
+ "CGs": [{
+  "name": "ADG1",
+  "displayName": "ADG1 display",
+  "mechanisms": [{
+    "typeName": "AuthnMechForm",
+    "sampleUrl": "http://form1.example.com/mockcontentserver1",
+    "urlPatterns": ["http://form1.example.com/"]
+  }],
+  "requiresUsername": false,
+  "requiresPassword": false,
+  "isOptional": false
+ }],
+ "params": {
+  "ACL_GROUPS_FILENAME": "acl_groups.enterprise",
+  "ACL_URLS_FILENAME": "acl_urls.enterprise",
+  "AUTHZ_CONFIG_FILENAME" : "FlexAuthz.xml",
+  "DENY_RULES_FILENAME": "deny_rules.enterprise",
+  "GLOBAL_SINGLE_REQUEST_TIMEOUT": "2.5",
+  "GLOBAL_BATCH_REQUEST_TIMEOUT": "5.0",
+  "CERTIFICATE_AUTHORITIES_FILENAME": "cacerts.jks",
+  "SAML_METADATA_FILENAME": "saml-metadata.xml",
+  "SERVER_CERTIFICATE_FILENAME": "server.jks",
+  "SIGNING_CERTIFICATE_FILENAME": "saml-server-test.crt",
+  "SIGNING_KEY_FILENAME": "saml-server-test.key",
+  "STUNNEL_PORT": "7843"
+ }
+}

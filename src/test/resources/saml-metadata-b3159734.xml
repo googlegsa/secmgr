@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- This is the metadata file that was responsible for b/3159734.  -->
+<EntitiesDescriptor cacheDuration="PT1H" xmlns="urn:oasis:names:tc:SAML:2.0:metadata"><!-- one hour -->
+
+  <!-- Description of the GSA -->
+  <EntityDescriptor ID="GSA" entityID="http://google.com/enterprise/gsa/${ENT_CONFIG_NAME}">
+
+    <SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+      <AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://$$GSA$$/SamlArtifactConsumer" index="0" isDefault="true"/>
+    </SPSSODescriptor>
+
+    <Organization>
+      <OrganizationName>google.com</OrganizationName>
+      <OrganizationDisplayName>Google Inc.</OrganizationDisplayName>
+      <OrganizationURL>http://www.google.com/</OrganizationURL>
+    </Organization>
+
+  </EntityDescriptor>
+
+  <!-- Description of the Security Manager -->
+  <EntityDescriptor ID="security-manager" entityID="http://google.com/enterprise/gsa/${ENT_CONFIG_NAME}/security-manager">
+
+    <IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+      <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://$$GSA$$:/security-manager/samlauthn"/>
+      <ArtifactResolutionService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="http://localhost:7886/security-manager/samlartifact" index="0" isDefault="true"/>
+    </IDPSSODescriptor>
+
+    <SPSSODescriptor AuthnRequestsSigned="true" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+      <AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://$$GSA$$:/security-manager/samlassertionconsumer" index="0" isDefault="true"/>
+      <AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact" Location="https://$$GSA$$:/security-manager/samlassertionconsumer" index="1" isDefault="false"/>
+    </SPSSODescriptor>
+
+    <PDPDescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+      <AuthzService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP" Location="http://localhost:7886/security-manager/samlauthz"/>
+    </PDPDescriptor>
+
+    <Organization>
+      <OrganizationName>google.com</OrganizationName>
+      <OrganizationDisplayName>Google Inc.</OrganizationDisplayName>
+      <OrganizationURL>http://www.google.com/</OrganizationURL>
+    </Organization>
+
+  </EntityDescriptor>
+
+
+<!-- SAML client IdPs -->
+<EntitiesDescriptor Name="security-manager-clients"><EntityDescriptor entityID="entzs30.hot"><IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"><SingleSignOnService Binding="urn:oasis\
+:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="http://hgorak.mtv.corp.google.com:28080/login"/></IDPSSODescriptor></EntityDescriptor></EntitiesDescriptor>
+</EntitiesDescriptor>

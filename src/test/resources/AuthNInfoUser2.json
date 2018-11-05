@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "timeStamp": 1315606857405,
+  "sessionState": {
+    "instructions": [
+      {
+        "operation": "ADD_CREDENTIAL",
+        "authority": "http://google.com/enterprise/gsa/security-manager/Default",
+        "operand": {
+          "name": "user2",
+          "namespace": "cg1",
+          "typeName": "AuthnPrincipal"
+        }
+      },
+      {
+        "operation": "ADD_CREDENTIAL",
+        "authority": "http://google.com/enterprise/gsa/security-manager/Default",
+        "operand": {
+          "password": "test1",
+          "typeName": "CredPassword"
+        }
+      },
+      {
+        "operation": "ADD_VERIFICATION",
+        "authority": "http://google.com/enterprise/gsa/security-manager/basic",
+        "operand": {
+          "status": "VERIFIED",
+          "expirationTime": 1315608009064,
+          "credentials": [
+            {
+              "name": "user2",
+              "namespace": "cg1",
+              "typeName": "AuthnPrincipal"
+            },
+            {
+              "password": "test1",
+              "typeName": "CredPassword"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "pviCredentials": {
+    "username": "user2",
+    "password": "test1",
+    "name_space": "cg1",
+    "groups": []
+  },
+  "basicCredentials": {
+    "username": "user2",
+    "password": "test1",
+    "name_space": "cg1",
+    "groups": []
+  },
+  "verifiedCredentials": [
+    {
+      "username": "user2",
+      "password": "test1",
+      "name_space": "cg1",
+      "groups": []
+    }
+  ],
+  "cookies": []
+}

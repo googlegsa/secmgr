@@ -1,0 +1,83 @@
+{"version": 7,
+ "CGs": [{
+  "name": "ADG1",
+  "displayName": "ADG1 display",
+  "mechanisms": [
+  {
+    "name": "form-1",
+    "typeName": "AuthnMechForm",
+    "sampleUrl": "http://form1.example.com/mockcontentserver1",
+    "timeout": 20
+  },
+  {
+    "name": "saml-1",
+    "typeName": "AuthnMechSaml",
+    "entityId": "entity1",
+    "timeout": 60
+  }],
+  "requiresUsername": false,
+  "requiresPassword": false,
+  "isOptional": false
+ }],
+ "params": {
+  "ACL_GROUPS_FILENAME": "acl_groupsv7.enterprise"
+ },
+  "flexAuthz": {
+  "entries":[{
+   "urlPattern": "/",
+   "authzRule": {
+    "authnId": "",
+    "authzMechType": "PER_URL_ACL",
+    "displayName": "0",
+    "timeout": -1
+   },
+   "uniqueRowId": "160f8e33-4fb9-407d-8702-425945ae7ffb"
+  }, {
+   "urlPattern": "/",
+   "authzRule": {
+    "authnId": "",
+    "authzMechType": "CACHE",
+    "displayName": "1",
+    "timeout": -1
+   },
+   "uniqueRowId": "894fc69d-1fb3-4a7e-a10d-ce552373fc8d"
+  }, {
+   "urlPattern": "/",
+   "authzRule": {
+    "authnId": "Default",
+    "authzMechType": "POLICY",
+    "displayName": "2",
+    "timeout": -1
+   },
+   "uniqueRowId": "3d317ca5-388c-474f-8d7e-1733b1a486cb"
+  }, {
+   "urlPattern": "^googleconnector://",
+   "authzRule": {
+    "authnId": "Default",
+    "authzMechType": "CONNECTOR",
+    "connectorName": "",
+    "displayName": "3",
+    "timeout": -1
+   },
+   "uniqueRowId": "9a5ffed2-c920-420c-bd01-344478cb6db1"
+  }, {
+   "urlPattern": "regexpIgnoreCase:^(http|https)://",
+   "authzRule": {
+    "authnId": "Default",
+    "authzMechType": "HEADREQUEST",
+    "displayName": "4",
+    "timeout": -1
+   },
+   "uniqueRowId": "cdd1e86e-54bb-4af5-ad41-0f4b221f5eed"
+  }, {
+   "urlPattern": "/",
+   "authzRule": {
+    "authnId": "Default",
+    "authzMechType": "FILE_SYSTEM",
+    "displayName": "5",
+    "timeout": -1
+   },
+   "uniqueRowId": "2af33b31-886c-48a6-9e44-f7b0d535f6ba"
+  }]
+ }
+}

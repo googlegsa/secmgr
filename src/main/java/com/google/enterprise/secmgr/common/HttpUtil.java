@@ -33,9 +33,6 @@ import com.google.common.io.CharStreams;
 import com.google.enterprise.secmgr.matcher.CharSet;
 import com.google.enterprise.secmgr.matcher.Matcher;
 import com.google.enterprise.secmgr.matcher.SucceedResult;
-
-import org.springframework.mock.web.MockHttpServletRequest;
-
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
@@ -57,7 +54,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -575,24 +571,8 @@ public final class HttpUtil {
    * @throws IllegalArgumentException if the request's URI can't be parsed.
    */
   public static URI getRequestUri(HttpServletRequest request, boolean includeQuery) {
-    URI uri = (request instanceof MockHttpServletRequest)
-        ? getMockRequestUri((MockHttpServletRequest) request)
-        : URI.create(request.getRequestURL().toString());
-    return includeQuery
-        ? uri
-        : replaceUriQuery(uri, null);
-  }
-
-  private static URI getMockRequestUri(MockHttpServletRequest request) {
-    // Note that it's not OK to call request.getRequestURL() because the mock
-    // implementation is broken and will include ":-1" if there's no port
-    // specified.
-    try {
-      return new URI(request.getScheme(), null, request.getServerName(), request.getServerPort(),
-          request.getRequestURI(), request.getQueryString(), null);
-    } catch (URISyntaxException e) {
-      throw new IllegalArgumentException(e);
-    }
+    URI uri = URI.create(request.getRequestURL().toString());
+    return replaceUriQuery(uri, includeQuery ? request.getQueryString() : null);
   }
 
   /**

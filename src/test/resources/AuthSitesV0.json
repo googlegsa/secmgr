@@ -1,0 +1,59 @@
+{"CGs": [
+  {
+    "Name": "Default",
+    "requiresPassword": false,
+    "requiresUsername": true,
+    "optional": false,
+    "Domains": [
+      {
+        "authority": "",
+        "sampleUrl": "http://ent-test-oblix1.corp.google.com/Site1/docs/",
+        "connectorManagerName": "",
+        "mechanism": "FORMS_AUTH",
+        "adDomain": "",
+        "connectorName": "",
+        "urlPatterns": ["http://ent-test-oblix1.corp.google.com/"],
+        "redirectUrl": ""
+      },
+      {
+        "authority": "",
+        "sampleUrl": "http://ent-test-siteminder1.corp.google.com/",
+        "connectorManagerName": "",
+        "mechanism": "FORMS_AUTH",
+        "adDomain": "",
+        "connectorName": "",
+        "urlPatterns": ["http://ent-test-siteminder1.corp.google.com/"],
+        "redirectUrl": ""
+      }
+    ]
+  },
+  {
+    "Name": "lab",
+    "DisplayName": "beautiful lab",
+    "requiresPassword": false,
+    "requiresUsername": false,
+    "optional": true,
+    "Domains": [
+      {
+        "authority": "",
+        "sampleUrl": "http://forms-auth-test.corp.google.com/content1",
+        "connectorManagerName": "",
+        "mechanism": "FORMS_AUTH",
+        "adDomain": "",
+        "connectorName": "",
+        "urlPatterns": ["http://forms-auth-test.corp.google.com/"],
+        "redirectUrl": ""
+      },
+      {
+        "authority": "",
+        "sampleUrl": "http://http-auth-test.corp.google.com/",
+        "connectorManagerName": "",
+        "mechanism": "BASIC_AUTH",
+        "adDomain": "",
+        "connectorName": "",
+        "urlPatterns": ["http://http-auth-test.corp.google.com/"],
+        "redirectUrl": ""
+      }
+    ]
+  }
+]}
