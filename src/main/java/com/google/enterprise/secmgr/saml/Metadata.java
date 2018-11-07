@@ -140,9 +140,8 @@ public class Metadata {
     }
   }
 
-  public static Metadata getInstance(HttpServletRequest request)
+  public static Metadata getInstance(URI uri)
       throws IOException {
-    URI uri = HttpUtil.getRequestUri(request, false);
     URI prefixUri;
     try {
       prefixUri = new URI(uri.getScheme(), uri.getHost(), null, null);
@@ -150,6 +149,12 @@ public class Metadata {
       throw new IllegalArgumentException(e);
     }
     return getInstance(prefixUri.toString());
+  }
+
+  public static Metadata getInstance(HttpServletRequest request)
+      throws IOException {
+    URI uri = HttpUtil.getRequestUri(request, false);
+    return getInstance(uri);
   }
 
   /**

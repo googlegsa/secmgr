@@ -16,6 +16,7 @@ package com.google.enterprise.secmgr.authncontroller;
 
 import java.io.IOException;
 
+import java.io.Serializable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -25,7 +26,7 @@ import javax.servlet.http.HttpServletResponse;
  * authentication controller to manage the credentials-gathering process.
  */
 @ParametersAreNonnullByDefault
-public interface CredentialsGatherer {
+public interface CredentialsGatherer extends Serializable {
 
   /**
    * Will this credentials gatherer handle a given session view?

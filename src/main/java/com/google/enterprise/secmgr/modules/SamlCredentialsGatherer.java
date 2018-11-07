@@ -18,6 +18,7 @@ import com.google.enterprise.logmanager.LogClient;
 import com.google.enterprise.secmgr.authncontroller.CredentialsGatherer;
 import com.google.enterprise.secmgr.authncontroller.CredentialsGathererElement;
 import com.google.enterprise.secmgr.authncontroller.SessionView;
+import com.google.enterprise.secmgr.common.HttpUtil;
 import com.google.enterprise.secmgr.common.SecurityManagerUtil;
 import com.google.enterprise.secmgr.config.AuthnMechSaml;
 import com.google.enterprise.secmgr.saml.Metadata;
@@ -26,6 +27,7 @@ import com.google.inject.Singleton;
 
 import java.io.IOException;
 
+import java.net.URI;
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
@@ -57,10 +59,12 @@ public class SamlCredentialsGatherer implements CredentialsGatherer {
       throws IOException {
     SessionView view = element.getSessionView();
     AuthnMechSaml mech = (AuthnMechSaml) view.getMechanism();
+    URI uri = HttpUtil.getRequestUri(request, false);
     SamlAuthnClient client
-        = SamlAuthnClient.make(Metadata.getInstance(request), mech.getEntityId(),
+        = SamlAuthnClient.make(Metadata.getInstance(uri), mech.getEntityId(),
             SamlSharedData.getProductionInstance(SamlSharedData.Role.SERVICE_PROVIDER),
-            mech.getTimeout());
+            mech.getTimeout(),
+            uri);
     gsaLogger.info(view.getRequestId(), "SAML Authn: sending authentication request"
         + " to service provider at Entity ID: " + mech.getEntityId());
     // Save the client for use when consuming assertion.

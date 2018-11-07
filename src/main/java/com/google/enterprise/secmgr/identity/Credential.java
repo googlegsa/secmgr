@@ -15,12 +15,13 @@
 package com.google.enterprise.secmgr.identity;
 
 import com.google.enterprise.secmgr.config.CredentialTypeName;
+import java.io.Serializable;
 
 /**
  * A credential.  Examples of credentials include: username, password, kerberos
  * ticket, X.509 certificate.
  */
-public interface Credential {
+public interface Credential extends Serializable {
 
   /**
    * Is it OK for this credential to be shared with others?

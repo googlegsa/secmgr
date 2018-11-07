@@ -43,6 +43,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
+import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.Iterator;
 import java.util.List;
@@ -60,7 +61,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @Immutable
 @ParametersAreNonnullByDefault
-public final class AuthnSessionState {
+public final class AuthnSessionState implements Serializable {
 
   /**
    * The possible instruction operations supported here.
@@ -553,7 +554,7 @@ public final class AuthnSessionState {
    */
   @Immutable
   @ParametersAreNonnullByDefault
-  public static final class Summary {
+  public static final class Summary implements Serializable {
     @Nonnull private final ImmutableList<CredentialGroup> credentialGroups;
     @Nonnull private final ImmutableMap<AuthnAuthority, ImmutableSet<GCookie>> cookiesMap;
     @Nonnull private final ImmutableSetMultimap<AuthnAuthority, Credential> credentialsMap;
@@ -737,7 +738,7 @@ public final class AuthnSessionState {
    */
   @Immutable
   @ParametersAreNonnullByDefault
-  public static final class Instruction {
+  public static final class Instruction implements Serializable {
     @Nonnull private final Operation operation;
     @Nonnull private final AuthnAuthority authority;
     @Nonnull private final Object operand;

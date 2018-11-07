@@ -42,6 +42,10 @@ import com.google.enterprise.secmgr.ulf.UniversalLoginForm;
 import com.google.enterprise.secmgr.ulf.UniversalLoginFormHtml;
 import com.google.enterprise.sessionmanager.SessionManagerInterfaceBase;
 
+import java.io.ObjectInputStream;
+import java.io.Serializable;
+import java.util.ArrayDeque;
+import java.util.Queue;
 import org.opensaml.common.binding.SAMLMessageContext;
 import org.opensaml.saml2.core.AuthnRequest;
 import org.opensaml.saml2.core.NameID;
@@ -50,7 +54,6 @@ import org.opensaml.saml2.core.Response;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.logging.Logger;
 
 import javax.annotation.Nonnull;
@@ -65,12 +68,82 @@ import javax.servlet.http.HttpServletRequest;
  * An object to represent the session information for authentication.
  */
 @ThreadSafe
-public class AuthnSession {
+public class AuthnSession implements Serializable {
+
+  // fields that are required for serializing/restoring SamlContext
+  private String samlRequest;
+  private String relayState;
+  private String serverName;
+  private int serverPort;
+  private String scheme;
+  private String requestURI;
+
+
+  public static final String AUTHN_SESSION = "AuthnSession";
+
   private static final Logger logger = Logger.getLogger(AuthnSession.class.getName());
   private static final LogClient GSA_LOGGER = new LogClient("Security Manager");
 
   @Inject private static AuthnSessionManager sessionManager;
   private static boolean secureSearchApiMode = false;
+
+  private boolean hasModifications = false;
+
+  public boolean hasModifications() {
+    return hasModifications;
+  }
+
+  public void resetModifications() {
+    this.hasModifications = false;
+  }
+
+  public String getSamlRequest() {
+    return samlRequest;
+  }
+
+  public void setSamlRequest(String samlRequest) {
+    this.samlRequest = samlRequest;
+  }
+
+  public String getRelayState() {
+    return relayState;
+  }
+
+  public void setRelayState(String relayState) {
+    this.relayState = relayState;
+  }
+
+  public void setServerName(String serverName) {
+    this.serverName = serverName;
+  }
+
+  public void setServerPort(int serverPort) {
+    this.serverPort = serverPort;
+  }
+
+  public void setScheme(String scheme) {
+    this.scheme = scheme;
+  }
+
+  public void setRequestURI(String requestURI) {
+    this.requestURI = requestURI;
+  }
+
+  public String getServerName() {
+    return serverName;
+  }
+
+  public int getServerPort() {
+    return serverPort;
+  }
+
+  public String getScheme() {
+    return scheme;
+  }
+
+  public String getRequestURI() {
+    return requestURI;
+  }
 
   /**
    * The authentication controller is a state machine.  This is the set of
@@ -125,16 +198,17 @@ public class AuthnSession {
   @GuardedBy("itself")
   private final CookieStore incomingCookies;
   private final String sessionId;
-  private final SecurityManagerConfig config;
+
+  private transient SecurityManagerConfig config;
 
   @GuardedBy("this")
   private AuthnState state;
   @GuardedBy("this")
-  private HttpServletRequest request;
+  private transient HttpServletRequest request;
   @GuardedBy("this")
   private String requestId;
   @GuardedBy("this")
-  private SAMLMessageContext<AuthnRequest, Response, NameID> samlSsoContext;
+  private transient SAMLMessageContext<AuthnRequest, Response, NameID> samlSsoContext;
   @GuardedBy("this")
   private URL authnEntryUrl;
   @GuardedBy("this")
@@ -142,7 +216,7 @@ public class AuthnSession {
   @GuardedBy("this")
   private UniversalLoginForm ulForm;
   @GuardedBy("this")
-  private Iterator<ClientPair> clientPairs;
+  private Queue<ClientPair> clientPairs;
   @GuardedBy("this")
   private CredentialsGathererElement clientElement;
   @GuardedBy("this")
@@ -150,7 +224,7 @@ public class AuthnSession {
   @GuardedBy("this")
   private AuthnSessionState sessionState;
 
-  private AuthnSession(SecurityManagerConfig config, String sessionId) {
+  public AuthnSession(SecurityManagerConfig config, String sessionId) {
     incomingCookies = GCookie.makeStore();
     this.sessionId = sessionId;
     this.requestId = null;
@@ -177,159 +251,18 @@ public class AuthnSession {
     return secureSearchApiMode;
   }
 
-  /**
-   *
-   * Gets the authentication-session object for a session, creating it if needed.
-   *
-   * @param request An HTTP servlet request containing a GSA session ID cookie.
-   * @param createGsaSmSessionIfNotExist Indicate whether to create a session
-   *     in GSA session manager when there is no GSA_SESSION_ID cookie passed
-   *     through via the request.
-   *     This is set to true only when called by SamlAuthn#doGet as it's the
-   *     only entry point of authn process. In later stage of authn process, we
-   *     return null if the user agent is not able to keep and pass the cookie.
-   * @return The authentication-session object for the given session ID, or null
-   *         if we couldn't find the GSA session ID cookie.
-   */
-  public static AuthnSession getInstance(HttpServletRequest request,
-      boolean createGsaSmSessionIfNotExist) throws IOException {
-    String sessionId = SessionUtil.findGsaSessionId(request);
 
-    // Parts of the security manager assume the GSA session ID and the
-    // security manager session ID are equal, so if the user has turned off
-    // cookies, we want to throw an exception here so our caller can tell
-    // them to turn cookies on.  However, unit tests don't set the
-    // GSA_SESSION_ID cookies, so the error is conditional.
-
-    // TODO: Once the sec-mgr supports offboard, the cookie
-    // domain limit might prevent the cookie from reaching us.  We might
-    // have to transfer the GSA session id in some other way (e.g. the SAML
-    // request).  We'll need to make sure this code gets updated
-    // appropriately.
-    if (sessionId == null) {
-      logger.warning("Unable to find GSA session ID.");
-      if (secureSearchApiMode) {
-        sessionId = SessionUtil.generateId();
-      } else if (createGsaSmSessionIfNotExist) {
-        SessionManagerInterfaceBase gsaSm = SessionUtil.getGsaSessionManager();
-        sessionId = gsaSm.createSession();
-        // The below key-value pair is required by EFE in
-        // {@code enterprise.frontend.AuthN#getSessionExpiration}.
-        //
-        // Here we first set it to {@code AuthNConstants.NEVER_EXPIRES} and
-        // later if the user starts a search through EFE with the same
-        // GSA_SESSION_ID, EFE will query secmgr for user authn state and secmgr
-        // will return expire time in the response and EFE will update the
-        // session accordingly.
-        gsaSm.setValue(sessionId, AuthNConstants.AUTHN_SESSION_EXPIRE_TIME_KEY,
-            AuthNConstants.NEVER_EXPIRES);
-      } else {
-        return null;
-      }
-    }
-
-    AuthnSession session = getInstanceInternal(sessionId);
-    if (secureSearchApiMode) {
-      session.setRequest(request);
-    }
-    String requestId = SessionUtil.findGsaRequestId(request);
-
-    if (requestId != null) {
-      session.setRequestId(requestId);
-      logger.fine("RequestId found: " + requestId + " for session " + sessionId);
-    } else {
-      logger.fine("RequestId was not found for this request. session=" + sessionId);
-    }
-
-    return session;
-  }
-
-  /**
-   * Gets the user's session if exists. If not create a new one.
-   * @param userId The user string
-   * @param credentialGroup The user's credential group
-   * @param password The user's password
-   * @return The user's session.
-   * @throws IOException if failed to contact session manager.
-   */
-  public static AuthnSession getInstanceForUser(String userId, String credentialGroup,
-      String password) throws IOException {
-    AuthnSession session;
+  public void addCredentials(String userId, String credentialGroup, String password) {
     String namespace = Strings.isNullOrEmpty(credentialGroup) ? CredentialGroup.DEFAULT_NAME
-                                                              : credentialGroup;
+        : credentialGroup;
     String credPassword = (password == null) ? "" : password;
     String[] parsed = IdentityUtil.parseNameAndDomain(userId);
-    // TODO: Add support for multiple credential groups.
-    SecurityManagerConfig config = ConfigSingleton.getConfig();
     AuthnPrincipal user = AuthnPrincipal.make(parsed[0],
         config.getCredentialGroup(namespace).getName(), parsed[1]);
-    // In real, no end-user submit concurrent queries.
-    // We don't support concurrent search request from one end-user for now.
-    session = sessionManager.getUserSession(user);
-    if (session == null) {
-      session = createInstance();
-      sessionManager.registerSession(session);
-      sessionManager.addUserSession(user, session.getSessionId());
-      session.addCredentials(
-          config.getCredentialGroup(namespace).getAuthority(),
-          user, CredPassword.make(credPassword));
-      logger.info("Created session " + session.getSessionId() + " for user " + userId
-          + " in " + namespace);
-    } else {
-      logger.info("Got existing session " + session.getSessionId() + " for user " + userId);
-    }
-
-    return session;
+    addCredentials(config.getCredentialGroup(namespace).getAuthority(), user,
+        CredPassword.make(credPassword));
   }
 
-  /**
-   * Gets the authentication-session object for a session, creating it if needed.
-   *
-   * @param sessionId The ID string for the session.
-   * @return The authentication-session object for the given session ID.
-   */
-  public static AuthnSession getInstance(String sessionId)
-      throws IOException {
-    Preconditions.checkArgument(SessionUtil.isValidId(sessionId));
-    return getInstanceInternal(sessionId);
-  }
-
-  @VisibleForTesting
-  public static AuthnSession newInstance()
-      throws IOException {
-    return getInstanceInternal(SessionUtil.generateId());
-  }
-
-  @VisibleForTesting
-  public static AuthnSession createInstance()
-      throws IOException {
-    String sessionId = SessionUtil.getGsaSessionManager().createSession();
-    logger.info("created session " + sessionId);
-    return getInstanceInternal(sessionId);
-  }
-
-  @VisibleForTesting
-  public static AuthnSession getInstance(SecurityManagerConfig config) {
-    Preconditions.checkNotNull(config);
-    return getInstanceInternal(SessionUtil.generateId(), config);
-  }
-
-  private static AuthnSession getInstanceInternal(String sessionId)
-      throws IOException {
-    return getInstanceInternal(sessionId, ConfigSingleton.getConfig());
-  }
-
-  private static AuthnSession getInstanceInternal(String sessionId, SecurityManagerConfig config) {
-    AuthnSession session;
-    synchronized (sessionManager) {
-      session = sessionManager.getSession(sessionId);
-      if (session == null) {
-        session = new AuthnSession(config, sessionId);
-        sessionManager.registerSession(session);
-      }
-    }
-    return session;
-  }
 
   /**
    * Gets a snapshot of the session state.
@@ -364,22 +297,22 @@ public class AuthnSession {
     return sessionState;
   }
 
-  // For use by AuthnController.
   void updateSessionState(final AuthnSessionState delta) {
     if (delta.isEmpty()) {
       return;
     }
     logger.info(logMessage("Modify session state:\n" + delta));
     synchronized (this) {
+      hasModifications = true;
       sessionState = sessionState.add(delta);
     }
   }
 
-  // For use by CommandsServlet to overrite the current state
   public void importSessionState(final AuthnSessionState delta) {
     logger.info(logMessage("Import session state:\n" + delta));
     synchronized (this) {
       sessionState = AuthnSessionState.empty().add(delta);
+      hasModifications = true;
     }
   }
 
@@ -465,6 +398,7 @@ public class AuthnSession {
     GSA_LOGGER.info(requestId, GCookie.requestCookiesMessage(
         "Incoming cookies from user agent", requestCookies));
     synchronized (incomingCookies) {
+      hasModifications = true;
       incomingCookies.clear();
       incomingCookies.addAll(requestCookies);
     }
@@ -564,6 +498,10 @@ public class AuthnSession {
   public synchronized SAMLMessageContext<AuthnRequest, Response, NameID> getSamlSsoContext() {
     assertNotIdleState();
     return samlSsoContext;
+  }
+
+  public synchronized void setSamlSsoContext(SAMLMessageContext<AuthnRequest, Response, NameID> context) {
+    this.samlSsoContext = context;
   }
 
   /**
@@ -673,12 +611,14 @@ public class AuthnSession {
     Preconditions.checkNotNull(credentialsGatherers);
     setState(AuthnState.IN_CREDENTIALS_GATHERER, AuthnState.AUTHENTICATING);
     ImmutableList.Builder<ClientPair> builder = ImmutableList.builder();
+    this.clientPairs = new ArrayDeque<>();
     for (CredentialsGatherer client : credentialsGatherers) {
       for (AuthnMechanism mechanism : config.getMechanisms()) {
-        builder.add(new ClientPair(client, mechanism));
+        ClientPair clientPair = new ClientPair(client, mechanism);
+        builder.add(clientPair);
+        clientPairs.add(clientPair);
       }
     }
-    clientPairs = builder.build().iterator();
   }
 
   private synchronized void clearCredentialsGathererState() {
@@ -740,10 +680,10 @@ public class AuthnSession {
    */
   synchronized ClientPair getNextClientPair() {
     assertState(AuthnState.IN_CREDENTIALS_GATHERER);
-    if (!clientPairs.hasNext()) {
+    if (clientPairs.isEmpty()) {
       return null;
     }
-    ClientPair clientPair = clientPairs.next();
+    ClientPair clientPair = clientPairs.remove();
     maybeFailForTest();
     return clientPair;
   }
@@ -788,6 +728,7 @@ public class AuthnSession {
       logger.info(logMessage("State transition from " + state + " to " + targetState));
     }
     state = targetState;
+    hasModifications = true;
   }
 
   private void illegalStateTransition(AuthnState targetState) {
@@ -899,5 +840,17 @@ public class AuthnSession {
       forceControllerFailure = null;
       throw new RuntimeException("Forced test failure.");
     }
+  }
+
+  public void setClientElement(
+      CredentialsGathererElement clientElement) {
+    this.clientElement = clientElement;
+  }
+
+
+  private void readObject(ObjectInputStream is)
+      throws ClassNotFoundException, IOException {
+    is.defaultReadObject();
+    this.config = ConfigSingleton.getConfig();
   }
 }

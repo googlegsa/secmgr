@@ -26,6 +26,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 
+import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.util.Map;
@@ -41,7 +42,7 @@ import javax.annotation.concurrent.ThreadSafe;
  */
 @ThreadSafe
 @ParametersAreNonnullByDefault
-public class AuthnAuthority {
+public class AuthnAuthority implements Serializable {
   @GuardedBy("itself")
   @Nonnull static final Map<URI, AuthnAuthority> AUTHORITIES = Maps.newHashMap();
 

@@ -42,11 +42,9 @@ import static com.google.enterprise.secmgr.ulf.UniversalLoginFormCustomization.P
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.html.HtmlEscapers;
 import com.google.enterprise.secmgr.common.FileUtil;
-import com.google.enterprise.secmgr.common.HttpUtil;
 import com.google.enterprise.secmgr.common.HttpUtil.FormParameterCodingException;
 import com.google.enterprise.secmgr.common.SecurePasswordHasher;
 import com.google.enterprise.secmgr.common.SessionUtil;
@@ -55,6 +53,7 @@ import com.google.enterprise.secmgr.ulf.UniversalLoginFormCustomization.FormGlob
 import com.google.enterprise.secmgr.ulf.UniversalLoginFormCustomization.PerCredentialOption;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,7 +78,7 @@ import javax.servlet.http.HttpServletRequest;
  *
  */
 @NotThreadSafe
-public class UniversalLoginFormHtml {
+public class UniversalLoginFormHtml implements Serializable {
   private static final Logger logger = Logger.getLogger(UniversalLoginFormHtml.class.getName());
 
   private static final String CUSTOMIZATION_FILE_NAME =
@@ -186,14 +185,12 @@ public class UniversalLoginFormHtml {
    * @throws FormParameterCodingException if the request body can't be parsed.
    */
   public List<FormResponse> parsePostedForm(HttpServletRequest request, String sessionId,
-      List<FormElement> formElements)
-      throws FormParameterCodingException, IOException {
-    ListMultimap<String, String> parameters = HttpUtil.getPostParameters(request);
+      List<FormElement> formElements) {
     ImmutableList.Builder<FormResponse> builder = ImmutableList.builder();
     for (FormElement formElem : formElements) {
       if (formElem.isEnabled()) {
-        String username = getUniqueParameter(getInputUserName(formElem), parameters);
-        String password = getUniqueParameter(getInputPassName(formElem), parameters);
+        String username = getUniqueParameter(getInputUserName(formElem), request.getParameterMap());
+        String password = getUniqueParameter(getInputPassName(formElem), request.getParameterMap());
         logger.info(SessionUtil.logMessage(sessionId,
                 "Retrieved user/pass: " + Stringify.object(username)
                 + " " + SecurePasswordHasher.getMac(username, password)));
@@ -203,13 +200,13 @@ public class UniversalLoginFormHtml {
     return builder.build();
   }
 
-  private static String getUniqueParameter(String key, ListMultimap<String, String> parameters) {
-    List<String> values = parameters.get(key);
-    if (values.isEmpty()) {
+  private static String getUniqueParameter(String key, Map<String, String[]> parameters) {
+    String[] values = parameters.get(key);
+    if (values.length == 0) {
       return "";
     }
-    Preconditions.checkArgument(values.size() == 1);
-    return values.get(0);
+    Preconditions.checkArgument(values.length == 1);
+    return values[0];
   }
 
   /*

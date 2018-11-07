@@ -24,6 +24,7 @@ import com.google.enterprise.secmgr.json.TypeAdapters;
 import com.google.enterprise.secmgr.json.TypeProxy;
 import com.google.gson.GsonBuilder;
 
+import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
@@ -40,7 +41,7 @@ import javax.servlet.http.HttpServletRequest;
  * all mechanisms; individual mechanisms inherit from here.
  */
 @ThreadSafe
-public abstract class AuthnMechanism {
+public abstract class AuthnMechanism implements Serializable {
   private static final Logger logger = Logger.getLogger(AuthnMechanism.class.getName());
 
   private static final int CONFIG_NAME_MAX_LENGTH = 200;

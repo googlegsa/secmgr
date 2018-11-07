@@ -20,6 +20,7 @@ import com.google.common.base.Strings;
 import com.google.enterprise.common.StringLockManager;
 import com.google.enterprise.secmgr.authncontroller.AuthnController;
 import com.google.enterprise.secmgr.authncontroller.AuthnSession;
+import com.google.enterprise.secmgr.authncontroller.AuthnSessionManager;
 import com.google.enterprise.secmgr.authncontroller.ExportedState;
 import com.google.enterprise.secmgr.authncontroller.SessionSnapshot;
 import com.google.enterprise.secmgr.authncontroller.TrustManager;
@@ -55,28 +56,24 @@ public class AuthnServlet extends ServletBase implements PostableHttpServlet {
   static final String GSA_PASSWORD = "X_GSA_PASSWORD";
   static final String GSA_CREDENTIAL_GROUP = "X_GSA_CREDENTIAL_GROUP";
 
+  @Nonnull private final AuthnSessionManager sessionManager;
   @Nonnull private final AuthnController controller;
   @Nonnull private final TrustManager trustManager;
   @Nonnull private final StringLockManager usernameLockManager;
 
   @Inject
-  private AuthnServlet() {
+  private AuthnServlet(AuthnSessionManager sessionManager) {
     controller = ConfigSingleton.getInstance(AuthnController.class);
     trustManager = ConfigSingleton.getInstance(TrustManager.class);
     usernameLockManager = new StringLockManager();
-  }
-
-  @VisibleForTesting
-  static AuthnServlet getTestingInstance() {
-    return new AuthnServlet();
+    this.sessionManager = sessionManager;
   }
 
   @Override
   public void doPost(HttpServletRequest request, HttpServletResponse response)
       throws IOException {
     AuthnSession.setSecureSearchApiMode(true);
-    AuthnSession session = AuthnSession.getInstance(request,
-        /*createGsaSmSessionIfNotExist=*/false);
+    AuthnSession session = sessionManager.createSession();
 
     response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
     if (session == null) {
@@ -144,7 +141,8 @@ public class AuthnServlet extends ServletBase implements PostableHttpServlet {
       Object usernameLock = usernameLockManager.acquire(endUser);
       try {
         synchronized (usernameLock) {
-          userSession = AuthnSession.getInstanceForUser(endUser, namespace, password);
+          userSession = sessionManager.createPersistentSession(request);
+          userSession.addCredentials(endUser, namespace, password);
         }
       } catch (IOException e) {
         logger.warning(decorator.apply("Could not get/make end user session: session manager"));

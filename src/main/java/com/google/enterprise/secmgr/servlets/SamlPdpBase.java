@@ -61,7 +61,6 @@ import org.opensaml.saml2.core.DecisionTypeEnumeration;
 import org.opensaml.saml2.core.NameID;
 import org.opensaml.saml2.core.Response;
 import org.opensaml.saml2.core.Status;
-import org.opensaml.saml2.core.StatusCode;
 import org.opensaml.ws.message.encoder.MessageEncodingException;
 import org.opensaml.ws.transport.http.HTTPInTransport;
 import org.opensaml.ws.transport.http.HTTPOutTransport;
@@ -137,7 +136,7 @@ public final class SamlPdpBase {
       long startDecoding = System.currentTimeMillis();
       DecodedRequest decodedRequest = decodeAuthzRequest(request);
       sessionId = decodedRequest.getSessionId();
-      AuthnSession session = sessionManager.getSession(sessionId);
+      AuthnSession session = sessionManager.findSessionById(sessionId);
       if (session == null) {
         logger.severe(SessionUtil.logMessage(sessionId, "Unable to find session"));
       }

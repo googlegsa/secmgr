@@ -28,6 +28,7 @@ import com.google.common.collect.Maps;
 import com.google.enterprise.secmgr.json.ProxyTypeAdapter;
 import com.google.enterprise.secmgr.json.TypeProxy;
 import com.google.gson.GsonBuilder;
+import java.io.Serializable;
 import java.net.URI;
 import java.util.Calendar;
 import java.util.EnumSet;
@@ -56,7 +57,7 @@ import org.joda.time.DateTimeUtils;
  */
 @Immutable
 @ParametersAreNonnullByDefault
-public final class GCookie {
+public final class GCookie implements Serializable {
   private static final Logger logger = Logger.getLogger(GCookie.class.getName());
 
   // A cookie with its name in this list will always have its value logged in
@@ -96,7 +97,7 @@ public final class GCookie {
    */
   @Immutable
   @ParametersAreNonnullByDefault
-  public static final class Key {
+  public static final class Key  implements Serializable{
     @Nonnull private final String name;
     @Nonnull private final String domain;
     @Nonnull private final String path;

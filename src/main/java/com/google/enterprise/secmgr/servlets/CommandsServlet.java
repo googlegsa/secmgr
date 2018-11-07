@@ -216,7 +216,7 @@ public class CommandsServlet extends HttpServlet {
     AuthnSessionManager authnsm = ConfigSingleton.getInstance(AuthnSessionManager.class);
 
     try {
-      AuthnSession session = authnsm.getSession(sessionId);
+      AuthnSession session = authnsm.findSessionById(sessionId);
       SessionSnapshot snapshot = session.getSnapshot();
       ExportedState state = ExportedState.make(snapshot);
       String jsonString = state.toJsonString();
@@ -232,10 +232,9 @@ public class CommandsServlet extends HttpServlet {
 
     AuthnSessionManager authnsm = ConfigSingleton.getInstance(AuthnSessionManager.class);
     try {
-      AuthnSession authnSession = AuthnSession.getInstance(sessionId);
+      AuthnSession authnSession = authnsm.findSessionById(sessionId);
       authnSession.importSessionState(ExportedState.fromJsonString(authnInfo).getSessionState());
-    } catch (IOException e) {
-      logger.warning("Failed to import session state. IOException:" + e);
+      authnsm.saveSession(authnSession);
     } catch (NullPointerException e) {
       logger.warning("Failed to import session state. NullPointerException:" + e);
     }

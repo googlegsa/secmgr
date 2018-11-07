@@ -15,10 +15,17 @@
  */
 package com.google.enterprise.secmgr.servlets;
 
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getAuthnRequestsSignedRule;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getBasicParserPool;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getRedirectSignatureRule;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.initializeSecurityPolicy;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAssertionConsumerService;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAuthnFailureStatus;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeResponderFailureStatus;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeSecurityFailureStatus;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.runDecoder;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.runEncoder;
+import static org.opensaml.common.xml.SAMLConstants.SAML2_ARTIFACT_BINDING_URI;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -36,12 +43,17 @@ import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.log.JdkLogChute;
 import org.opensaml.common.binding.SAMLMessageContext;
 import org.opensaml.common.xml.SAMLConstants;
+import org.opensaml.saml2.binding.decoding.HTTPRedirectDeflateDecoder;
 import org.opensaml.saml2.binding.encoding.HTTPArtifactEncoder;
 import org.opensaml.saml2.binding.encoding.HTTPPostEncoder;
 import org.opensaml.saml2.core.AuthnRequest;
 import org.opensaml.saml2.core.NameID;
 import org.opensaml.saml2.core.Response;
 import org.opensaml.saml2.core.Status;
+import org.opensaml.saml2.metadata.AssertionConsumerService;
+import org.opensaml.saml2.metadata.Endpoint;
+import org.opensaml.ws.message.decoder.MessageDecodingException;
+import org.opensaml.ws.transport.http.HttpServletRequestAdapter;
 import org.opensaml.ws.transport.http.HttpServletResponseAdapter;
 import org.opensaml.xml.security.SecurityException;
 
@@ -56,6 +68,8 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.Immutable;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 
 /**
  * An abstract base class for servlets participating in SAML SSO authentication.
@@ -300,5 +314,130 @@ public abstract class SamlIdpServlet extends SamlServlet {
     } else {
       throw new IllegalStateException("Unknown binding: " + responseBinding);
     }
+  }
+
+
+  protected static void prepareSamlContextForSerialization(HttpServletRequest request,
+      AuthnSession session) {
+    session.setSamlRequest(request.getParameter("SAMLRequest"));
+    session.setRelayState(request.getParameter("RelayState"));
+    session.setServerName(request.getServerName());
+    session.setServerPort(request.getServerPort());
+    session.setScheme(request.getScheme());
+    session.setRequestURI(request.getRequestURI());
+  }
+
+  protected static void restoreSamlContext(AuthnSession session) {
+    MockHttpServletRequest mockHttpServletRequest = new MockHttpServletRequest("GET",
+        session.getRequestURI());
+    mockHttpServletRequest.setServerName(session.getServerName());
+    mockHttpServletRequest.setServerPort(session.getServerPort());
+    mockHttpServletRequest.setScheme(session.getScheme());
+    mockHttpServletRequest.setParameter("SAMLRequest", session.getSamlRequest());
+    mockHttpServletRequest.setParameter("RelayState", session.getRelayState());
+
+    GeneratedContext generatedContext;
+    try {
+      generatedContext = createAuthnContext(mockHttpServletRequest, new MockHttpServletResponse(),
+          SamlSharedData.getProductionInstance(SamlSharedData.Role.IDENTITY_PROVIDER));
+    } catch (IOException e) {
+      throw new RuntimeException("Unable restore saml context");
+    }
+    session.setSamlSsoContext(generatedContext.context);
+  }
+
+
+  public static class GeneratedContext {
+    private final SAMLMessageContext<AuthnRequest, Response, NameID> context;
+    private final SecurityException securityException;
+
+    public SAMLMessageContext<AuthnRequest, Response, NameID> getContext() {
+      return context;
+    }
+
+    public SecurityException getSecurityException() {
+      return securityException;
+    }
+
+    GeneratedContext(
+        SAMLMessageContext<AuthnRequest, Response, NameID> context,
+        SecurityException securityException) {
+      this.context = context;
+      this.securityException = securityException;
+    }
+  }
+
+  protected static GeneratedContext createAuthnContext(HttpServletRequest request,
+      HttpServletResponse response, SamlSharedData sharedData)
+      throws IOException {
+    Decorator decorator = SessionUtil.getLogDecorator(request);
+
+    // Establish the SAML message context.
+    SAMLMessageContext<AuthnRequest, Response, NameID> context = makeSamlMessageContext(request,
+        sharedData);
+    initializeSecurityPolicy(context,
+        getAuthnRequestsSignedRule(),
+        getRedirectSignatureRule());
+
+    // Decode the request.
+    context.setInboundMessageTransport(new HttpServletRequestAdapter(request));
+    SecurityException securityException = null;
+    try {
+      runDecoder(new HTTPRedirectDeflateDecoder(getBasicParserPool()), context, decorator,
+          AuthnRequest.DEFAULT_ELEMENT_NAME);
+    } catch (IOException e) {
+      if (e.getCause() instanceof MessageDecodingException) {
+        initErrorResponse(response, HttpServletResponse.SC_FORBIDDEN);
+        return null;
+      }
+      throw e;
+    } catch (SecurityException e) {
+      securityException = e;
+    }
+
+    // Now, some complicated logic to determine where to send the response.
+    Endpoint embeddedEndpoint = getEmbeddedEndpoint(context.getInboundSAMLMessage());
+    if (embeddedEndpoint == null) {
+      // Normal case: we use metadata to identify the peer.
+      initializePeerEntity(context,
+          AssertionConsumerService.DEFAULT_ELEMENT_NAME,
+          SAML2_ARTIFACT_BINDING_URI, sharedData);
+      // If there's no metadata available, we can't process the request.
+      // Generate an error and send it back to the user agent.
+      if (context.getPeerEntityMetadata() == null && securityException == null) {
+        securityException
+            = new SecurityException(
+            "Service provider didn't provide an assertion consumer endpoint.");
+      }
+    } else {
+      // We have an embedded endpoint.
+      if (context.isIssuerAuthenticated()) {
+        // If the message is signed, then send the response to the embedded
+        // endpoint.
+        context.setPeerEntityEndpoint(embeddedEndpoint);
+      } else {
+        // Otherwise, use metadata to determine the endpoint.
+        initializePeerEntity(context,
+            AssertionConsumerService.DEFAULT_ELEMENT_NAME,
+            SAML2_ARTIFACT_BINDING_URI, sharedData);
+        // If there's no metadata, send an error response to the embedded
+        // endpoint.
+        if (context.getPeerEntityMetadata() == null) {
+          context.setPeerEntityEndpoint(embeddedEndpoint);
+          if (securityException == null) {
+            securityException = new SecurityException("Unable to authenticate request issuer");
+          }
+        }
+      }
+    }
+    return new GeneratedContext(context, securityException);
+  }
+
+  private static Endpoint getEmbeddedEndpoint(AuthnRequest authnRequest) {
+    String url = authnRequest.getAssertionConsumerServiceURL();
+    String binding = authnRequest.getProtocolBinding();
+    return (url != null && binding != null)
+        ? makeAssertionConsumerService(url, binding)
+        : null;
   }
 }

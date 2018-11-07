@@ -53,6 +53,9 @@ import com.google.enterprise.secmgr.modules.RedirectCredentialsGatherer;
 import com.google.enterprise.secmgr.modules.SamlCredentialsGatherer;
 import com.google.enterprise.secmgr.modules.SamlModule;
 import com.google.enterprise.secmgr.modules.SampleUrlModule;
+import com.google.enterprise.secmgr.saml.OpenSamlUtil;
+import com.google.enterprise.sessionmanager.ArtifactStorageService;
+import com.google.enterprise.sessionmanager.SessionFilter;
 import com.google.gson.GsonBuilder;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -190,6 +193,8 @@ public class SecurityManagerServletConfig extends GuiceServletContextListener {
         .put(AuthzMechanism.SAML, injector.getInstance(SamlModule.class))
         .put(AuthzMechanism.PER_URL_ACL, injector.getInstance(PerUrlAclModule.class))
         .build());
+
+    OpenSamlUtil.setArtifactStorageService(injector.getInstance(ArtifactStorageService.class));
   }
 
   private static final class LocalServletModule extends ServletModule {
@@ -199,6 +204,7 @@ public class SecurityManagerServletConfig extends GuiceServletContextListener {
       for (Map.Entry<String, Class<? extends HttpServlet>> entry : SERVLETS.entrySet()) {
         serve(entry.getKey()).with(entry.getValue());
       }
+      filter("/*").through(SessionFilter.class);
     }
   }
 
