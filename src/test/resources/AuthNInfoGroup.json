@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "timeStamp": 1315606857405,
+  "sessionState": {
+    "instructions": [
+      {
+        "operation": "ADD_CREDENTIAL",
+        "authority": "http://google.com/enterprise/gsa/security-manager/Default",
+        "operand": {
+          "name": "another",
+          "namespace": "cg1",
+          "typeName": "AuthnPrincipal"
+        }
+      },
+      {
+        "operation": "ADD_CREDENTIAL",
+        "authority": "http://google.com/enterprise/gsa/security-manager/Default",
+        "operand": {
+          "password": "test1",
+          "typeName": "CredPassword"
+        }
+      },
+      {
+        "operation": "ADD_VERIFICATION",
+        "authority": "http://google.com/enterprise/gsa/security-manager/basic",
+        "operand": {
+          "status": "VERIFIED",
+          "expirationTime": 1315608009064,
+          "credentials": [
+            {
+              "name": "another",
+              "namespace": "cg1",
+              "typeName": "AuthnPrincipal"
+            },
+            {
+              "password": "test1",
+              "typeName": "CredPassword"
+            }
+          ]
+        }
+      },
+      {
+        "operation": "ADD_VERIFICATION",
+        "authority": "http://google.com/enterprise/gsa/security-manager/LDAP-1",
+        "operand": {
+          "status": "VERIFIED",
+          "expirationTime": 1352339472568,
+          "credentials": [
+            {
+              "groups": [
+                {
+                  "name": "moma-search-prod",
+                  "namespace": "cg1"
+                },
+                {
+                  "name": "group_1",
+                  "namespace": "cg1"
+                }
+              ],
+              "typeName": "GroupMemberships"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "pviCredentials": {
+    "username": "another",
+    "password": "test1",
+    "name_space": "cg1",
+    "groups": [
+      {
+        "name": "moma-search-prod",
+        "namespace": "cg1"
+      },
+      {
+        "name": "group_1",
+        "namespace": "cg1"
+      }
+    ]
+  },
+  "basicCredentials": {
+    "username": "another",
+    "password": "test1",
+    "name_space": "cg1",
+    "groups": [
+      {
+        "name": "moma-search-prod",
+        "namespace": "cg1"
+      },
+      {
+        "name": "group_1",
+        "namespace": "cg1"
+      }
+    ]
+  },
+  "verifiedCredentials": [
+    {
+      "username": "another",
+      "password": "test1",
+      "name_space": "cg1",
+      "groups": [
+        {
+          "name": "moma-search-prod",
+          "namespace": "cg1"
+        },
+        {
+          "name": "group_1",
+          "namespace": "cg1"
+        }
+      ]
+    }
+  ],
+  "cookies": []
+}

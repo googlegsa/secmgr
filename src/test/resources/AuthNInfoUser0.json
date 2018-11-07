@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "timeStamp": 1371833527273,
+  "sessionState": {
+    "instructions": [
+      {
+        "operation": "ADD_VERIFICATION",
+        "authority": "http://google.com/enterprise/gsa/security-manager/moma",
+        "operand": {
+          "status": "VERIFIED",
+          "expirationTime": 1371833827223,
+          "credentials": [
+            {
+              "name": "crack_cs_get",
+              "namespace": "Default",
+              "typeName": "AuthnPrincipal"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "pviCredentials": {
+    "username": "crack_cs_get",
+    "name_space": "Default",
+    "groups": []
+  },
+  "basicCredentials": {
+    "username": "crack_cs_get",
+    "name_space": "Default",
+    "groups": []
+  },
+  "verifiedCredentials": [    {
+      "username": "crack_cs_get",
+      "name_space": "Default",
+      "groups": []
+    }
+  ],
+  "cookies": []
+}

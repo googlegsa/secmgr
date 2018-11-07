@@ -86,7 +86,8 @@ public class JsonConfig extends ConfigCodec {
     SecurityManagerConfig config;
     try {
       config = ConfigSingleton.getGson().fromJson(je, SecurityManagerConfig.class);
-    } catch (JsonParseException e) {
+    } catch (Exception e) {
+      // Replicating catch-all workaround from an internal G-patch
       logger.info("Exception parsing JSON config element: " + e.getMessage());
       return tryPreVersionNumberCodec(je);
     }

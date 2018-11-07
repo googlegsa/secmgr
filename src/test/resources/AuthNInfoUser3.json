@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "timeStamp": 1315606857405,
+  "sessionState": {
+    "instructions": [
+      {
+        "operation": "ADD_VERIFICATION",
+        "authority": "http://google.com/enterprise/gsa/security-manager/moma",
+        "operand": {
+          "status": "VERIFIED",
+          "expirationTime": 1315608009064,
+          "credentials": [
+            {
+              "name": "MOMA-SEARCH-PROD",
+              "namespace": "cg1",
+              "typeName": "AuthnPrincipal"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "pviCredentials": {
+    "username": "MOMA-SEARCH-PROD",
+    "name_space": "cg1",
+    "groups": []
+  },
+  "basicCredentials": {
+    "username": "MOMA-SEARCH-PROD",
+    "name_space": "cg1",
+    "groups": []
+  },
+  "verifiedCredentials": [
+    {
+      "username": "MOMA-SEARCH-PROD",
+      "name_space": "cg1",
+      "groups": []
+    }
+  ],
+  "cookies": []
+}
