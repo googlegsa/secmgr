@@ -25,6 +25,8 @@ import org.joda.time.DateTimeUtils;
  */
 public final class AuthnSessionManagerImplTest extends SecurityManagerTestCase {
 
+  private static final int EPSILON = 100;
+
   private static final long ONE_MINUTE = 60 * 1000;
 
   private static final long[] OFFSETS = new long[] { -ONE_MINUTE, -10, -1, 1, 10, ONE_MINUTE };
@@ -127,9 +129,9 @@ public final class AuthnSessionManagerImplTest extends SecurityManagerTestCase {
     AuthnSession session = AuthnSession.newInstance();
     String sessionId = session.getSessionId();
     manager.registerSession(session);
-    DateTimeUtils.setCurrentMillisOffset(sessionIdleTime - 10);
+    DateTimeUtils.setCurrentMillisOffset(sessionIdleTime - EPSILON);
     tryGetSession(true, sessionId, session);
-    DateTimeUtils.setCurrentMillisOffset(sessionIdleTime - 10 + sessionIdleTime + offset);
+    DateTimeUtils.setCurrentMillisOffset(sessionIdleTime - EPSILON + sessionIdleTime + offset);
     tryGetSession(offset <= 0, sessionId, session);
   }
 }
