@@ -64,6 +64,12 @@
           <!-- 2 forks per cpu-core, don't reuse them (full isolation) -->
           <forkCount>2C</forkCount>
           <reuseForks>false</reuseForks>
+          <systemProperties>
+            <property>
+              <name>java.util.logging.config.file</name>
+              <value>src/test/resources/logging.properties</value>
+            </property>
+          </systemProperties>
         </configuration>
       </plugin>
     </plugins>

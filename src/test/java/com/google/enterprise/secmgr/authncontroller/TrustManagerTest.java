@@ -140,7 +140,6 @@ public final class TrustManagerTest extends SecurityManagerTestCase {
 
     File tmpFile = File.createTempFile(getClass().getName() + "-trust", ".tmp");
     // ../testdata/trust.enterprise is copied from the file generated this way.
-    System.out.println(tmpFile.toString());
     manager.writeToFile(principals, tmpFile.getCanonicalPath());
     manager.setConfFile(tmpFile.getCanonicalPath());
     manager.load();
