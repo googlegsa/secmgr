@@ -70,6 +70,8 @@
               <value>src/test/resources/logging.properties</value>
             </property>
           </systemProperties>
+          <!-- workaround for unexpected vm exit errors -->
+          <useSystemClassLoader>false</useSystemClassLoader>
         </configuration>
       </plugin>
     </plugins>
