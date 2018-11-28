@@ -1,5 +1,6 @@
 package com.google.enterprise.sessionmanager;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.enterprise.secmgr.authncontroller.AuthnSession;
 import com.google.enterprise.secmgr.authncontroller.AuthnSessionManager;
 import java.io.IOException;
@@ -33,20 +34,25 @@ public class SessionFilter implements Filter {
 
     filterChain.doFilter(servletRequest, servletResponse);
 
-    HttpServletRequest httpRequest = (HttpServletRequest) servletRequest;
+    afterServlet((HttpServletRequest) servletRequest);
+  }
+
+  @VisibleForTesting
+  public void afterServlet(HttpServletRequest servletRequest) {
+    HttpServletRequest httpRequest = servletRequest;
     AuthnSession authnSession = (AuthnSession) httpRequest.getAttribute("AuthnSession");
     if (authnSession == null) {
-      logger.info("-- No session, nothing to save");
+      logger.fine("No session, nothing to save");
       return;
     }
     if (authnSession.hasModifications()) {
-      logger.info("--- Saving modified session!!!!");
+      logger.fine("Saving modified session");
       authnSession.resetModifications();
 
       sessionManager.saveSession(authnSession);
     } else {
       sessionManager.updateSessionTTL(authnSession);
-      logger.info("-- No mods for session found, update ttl!!!!");
+      logger.fine("No mods for session found, update ttl");
     }
   }
 

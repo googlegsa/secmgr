@@ -22,9 +22,11 @@ import com.google.common.io.CharStreams;
 import com.google.enterprise.secmgr.common.PostableHttpServlet;
 import com.google.enterprise.secmgr.common.ServletBase;
 import com.google.enterprise.secmgr.common.XmlUtil;
+import com.google.enterprise.secmgr.config.ConfigSingleton;
 import com.google.enterprise.secmgr.mock.MockHttpClient;
 import com.google.enterprise.secmgr.mock.MockHttpTransport;
 import com.google.enterprise.secmgr.testing.SecurityManagerTestCase;
+import com.google.enterprise.sessionmanager.SessionFilter;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Arrays;
@@ -74,7 +76,8 @@ public class ConnectorUtilTest extends SecurityManagerTestCase {
 
   private void trySendMessageEncoding(boolean useReader)
       throws IOException, ServletException {
-    MockHttpTransport httpTransport = new MockHttpTransport();
+    MockHttpTransport httpTransport = new MockHttpTransport(ConfigSingleton
+        .getInstance(SessionFilter.class));
     HttpServlet servlet = new FakeCm(useReader);
     httpTransport.registerServlet(CM_URL, servlet);
     MockHttpClient httpClient = new MockHttpClient(httpTransport);

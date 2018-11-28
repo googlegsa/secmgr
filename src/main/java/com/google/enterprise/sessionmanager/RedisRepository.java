@@ -17,6 +17,8 @@ import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.logging.Logger;
+import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Singleton;
 import org.opensaml.common.binding.artifact.SAMLArtifactMap.SAMLArtifactMapEntry;
 
@@ -30,15 +32,15 @@ public class RedisRepository {
 
   private static final Logger logger = Logger.getLogger(RedisRepository.class.getName());
 
-  public RedisRepository() {
-    // TODO:dturbai Configure redis connection outside of app!!!!!!
-    RedisClient redisClient = RedisClient.create("redis://redis:6379/0");
+  @Inject
+  public RedisRepository(@Named("redis-connection-string") String redisConnectionString) {
+    RedisClient redisClient = RedisClient.create(redisConnectionString);
     StatefulRedisConnection<String, Object> connect = redisClient.connect(new SerializedObjectCodec());
     redisCommands = connect.sync();
   }
 
-  public void storeSession(AuthnSession session) {
-    redisCommands.set(session.getSessionId(), session, SESSION_TTL);
+  public void storeSession(AuthnSession session, long sessionIdleMillis) {
+    redisCommands.set(session.getSessionId(), session, Builder.ex(sessionIdleMillis / 1000));
   }
 
   public AuthnSession loadSession(String sessionId) {

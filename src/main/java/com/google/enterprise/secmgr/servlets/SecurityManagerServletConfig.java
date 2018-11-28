@@ -54,20 +54,24 @@ import com.google.enterprise.secmgr.modules.SamlCredentialsGatherer;
 import com.google.enterprise.secmgr.modules.SamlModule;
 import com.google.enterprise.secmgr.modules.SampleUrlModule;
 import com.google.enterprise.secmgr.saml.OpenSamlUtil;
-import com.google.enterprise.sessionmanager.ArtifactStorageService;
+import com.google.enterprise.sessionmanager.ArtifactStorageServiceImpl;
 import com.google.enterprise.sessionmanager.SessionFilter;
 import com.google.gson.GsonBuilder;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 import java.io.File;
+import java.io.IOException;
 import java.util.Map;
 import java.util.logging.Logger;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.http.HttpServlet;
+import org.springframework.util.SocketUtils;
+import redis.embedded.RedisServer;
 
 /**
  * This is the top-level configuration of the security manager.  All the Guice
@@ -194,7 +198,7 @@ public class SecurityManagerServletConfig extends GuiceServletContextListener {
         .put(AuthzMechanism.PER_URL_ACL, injector.getInstance(PerUrlAclModule.class))
         .build());
 
-    OpenSamlUtil.setArtifactStorageService(injector.getInstance(ArtifactStorageService.class));
+    OpenSamlUtil.setArtifactStorageService(injector.getInstance(ArtifactStorageServiceImpl.class));
   }
 
   private static final class LocalServletModule extends ServletModule {
@@ -210,11 +214,27 @@ public class SecurityManagerServletConfig extends GuiceServletContextListener {
 
   private static final class TestModule extends AbstractModule {
 
+    RedisServer redisServer = null;
+
     @Override
     protected void configure() {
       for (Class<? extends HttpServlet> clazz : SERVLETS.values()) {
         bind(clazz);
       }
+      int availableTcpPort = SocketUtils.findAvailableTcpPort();
+      try {
+        redisServer = new RedisServer(availableTcpPort);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+      redisServer.start();
+      Runtime.getRuntime().addShutdownHook(new Thread() {
+        public void run() {
+          redisServer.stop();
+        }
+      });
+      bindConstant().annotatedWith(Names.named("redis-connection-string"))
+          .to("redis://localhost:" + availableTcpPort + "/0");
     }
   }
 

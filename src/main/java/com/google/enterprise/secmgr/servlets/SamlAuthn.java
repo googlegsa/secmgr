@@ -32,6 +32,7 @@ import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.opensaml.ws.message.decoder.MessageDecodingException;
 
 /**
  * Handler for SAML authentication requests.  These requests are sent by a service provider, in our
@@ -67,18 +68,24 @@ public class SamlAuthn extends SamlIdpServlet
     Decorator decorator = SessionUtil.getLogDecorator(request);
     controller.setSecureSearchApiMode(false);
     AuthnSession.setSecureSearchApiMode(false);
-    AuthnSession session = authnSessionManager.createPersistentSession(request);
-    if (session == null) {
-      logger.warning(decorator.apply("Could not get/make session; abandoning request."));
-      initNormalResponseWithHeaders(response, HttpServletResponse.SC_EXPECTATION_FAILED)
-        .print(PLEASE_ENABLE_COOKIES_MSG);
-      return;
-    }
-    prepareSamlContextForSerialization(request, session);
+    /*try to reuse existing session*/
 
-    session.logIncomingRequest(request);
-
+    AuthnSession session = authnSessionManager.findSession(request);
     try {
+      if (session != null) {
+        restoreSamlContext(session);
+      } else {
+        // create brand new session
+        session = authnSessionManager.createPersistentSession(request);
+      }
+      if (session == null) {
+        logger.warning(decorator.apply("Could not get/make session; abandoning request."));
+        initNormalResponseWithHeaders(response, HttpServletResponse.SC_EXPECTATION_FAILED)
+            .print(PLEASE_ENABLE_COOKIES_MSG);
+        return;
+      }
+
+      session.logIncomingRequest(request);
 
       // If the session is newly created in AuthnSession#getInstance due to
       // createGsaSmSessionIfNotExist is set to true, then it must be in
@@ -101,6 +108,8 @@ public class SamlAuthn extends SamlIdpServlet
       session.setStateAuthenticating(HttpUtil.getRequestUrl(request, false),
           generatedContext.getContext());
 
+      prepareSamlContextForSerialization(request, session);
+
       if (generatedContext.getSecurityException() != null) {
         failFromException(generatedContext.getSecurityException(), session, request, response);
         return;
@@ -110,6 +119,10 @@ public class SamlAuthn extends SamlIdpServlet
       doAuthn(session, request, response);
 
     } catch (IOException | RuntimeException e) {
+      if (e.getCause() instanceof MessageDecodingException) {
+        initErrorResponse(response, HttpServletResponse.SC_FORBIDDEN);
+        return;
+      }
       failFromException(e, session, request, response);
     }
   }

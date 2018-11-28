@@ -75,8 +75,7 @@ public class AuthzServlet extends ServletBase implements PostableHttpServlet {
 
     AuthzResult result
         = authorizer.apply(
-            getResources(authzRequest),
-            sessionManager.findSessionById(authzRequest.getSubject()),
+            getResources(authzRequest), authzRequest.getSubject(),
             authzRequest.getMode() == AuthzRequest.Mode.FAST);
 
     AuthzResponse.Builder builder = AuthzResponse.newBuilder();

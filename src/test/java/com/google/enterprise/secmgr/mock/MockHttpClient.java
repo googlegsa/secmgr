@@ -14,6 +14,8 @@
 
 package com.google.enterprise.secmgr.mock;
 
+import static com.google.enterprise.secmgr.common.SessionUtil.GSA_SESSION_ID_COOKIE_NAME;
+
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ArrayListMultimap;
@@ -59,6 +61,8 @@ public class MockHttpClient implements HttpClientInterface {
   private String referrer;
   private boolean fillInBoilerplateHeaders;
 
+  private String secMgrSessionId;
+
   public MockHttpClient(HttpTransport transport) {
     this(transport, null);
   }
@@ -69,6 +73,14 @@ public class MockHttpClient implements HttpClientInterface {
     session = new MockHttpSession();
     referrer = null;
     fillInBoilerplateHeaders = false;
+  }
+
+  public String getSecMgrSessionId() {
+    return secMgrSessionId;
+  }
+
+  public void setSecMgrSessionId(String secMgrSessionId) {
+    this.secMgrSessionId = secMgrSessionId;
   }
 
   public void setFillInBoilerplateHeaders(boolean fillInBoilerplateHeaders) {
@@ -291,7 +303,8 @@ public class MockHttpClient implements HttpClientInterface {
       // Only add those cookies that are applicable to the request URL.
       CookieStore toSend = GCookie.makeStore();
       for (GCookie cookie : exchangeCookies) {
-        if (cookie.isGoodFor(HttpUtil.toUri(url))) {
+        // TODO(dturbai): url - is URL for previous http request but not the URL for current exchange.
+        if (cookie.isGoodFor(HttpUtil.toUri(url)) || cookie.getName().equals(GSA_SESSION_ID_COOKIE_NAME)) { // MUST BE FIXED!!!!!
           toSend.add(cookie);
         }
       }
@@ -327,13 +340,24 @@ public class MockHttpClient implements HttpClientInterface {
         throw ee;
       }
       this.response = response;
+
+      if (response.getHeaders("Set-Cookie").stream()
+          .anyMatch(cookieStr -> cookieStr.startsWith(GSA_SESSION_ID_COOKIE_NAME + "="))) {
+        logger.info("Got session: " + response.getCookie(GSA_SESSION_ID_COOKIE_NAME).getValue());
+        secMgrSessionId = response.getCookie(GSA_SESSION_ID_COOKIE_NAME).getValue();
+      }
       referrer = HttpUtil.getRequestUrl(request, false).toString();
 
       // Save the response cookies.
-      GCookie.parseResponseHeaders(
-          getResponseHeaderValues(HttpUtil.HTTP_HEADER_SET_COOKIE),
-          HttpUtil.toUri(url),
-          exchangeCookies);
+      // need synchronized here to protect "exchangeCookies" collection because this method is used
+      // in tests that run several threads and exchangeCookies is not thread-safe
+      // e.g. (com.google.enterprise.secmgr.servlets.AuthnServletTest.testConcurrentForSameUser)
+      synchronized (exchangeCookies) {
+        GCookie.parseResponseHeaders(
+            getResponseHeaderValues(HttpUtil.HTTP_HEADER_SET_COOKIE),
+            HttpUtil.toUri(url),
+            exchangeCookies);
+      }
 
       // Make sure the content length is properly recorded.
       int length = response.getContentAsByteArray().length;

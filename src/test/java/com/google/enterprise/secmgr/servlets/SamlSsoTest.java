@@ -965,7 +965,7 @@ public class SamlSsoTest extends SecurityManagerTestCase {
         standardLogPrefix(
             // initial presatisfaction check
             unsuccessfulSampleUrlCheck(SC_OK,
-                MockFormAuthServer.Form1.class.getSimpleName())            
+                MockFormAuthServer.Form1.class.getSimpleName())
         ),
         // SecMgr redirects to the content server,
         logRedirect(MockContentServer.class.getSimpleName()),
@@ -986,7 +986,7 @@ public class SamlSsoTest extends SecurityManagerTestCase {
     integration.setUserAgentCookie(MockFormAuthServer.Form1.COOKIE_NAME,
         COOKIE_VALUES.VALID);
     integration.assertContentResult(1, integration.startSearch());
-    integration.checkExchangeLog(makeValidCookieNoRedirectLog());    
+    integration.checkExchangeLog(makeValidCookieNoRedirectLog());
   }
 
   private static LogItem makeValidCookieNoRedirectLog() {
@@ -1137,7 +1137,7 @@ public class SamlSsoTest extends SecurityManagerTestCase {
                 MockFormAuthServer.Form1.class.getSimpleName())
         ),
         // SecMgr redirects to the content server,
-        logRedirect(MockContentServer.class.getSimpleName()),          
+        logRedirect(MockContentServer.class.getSimpleName()),
         // content server redirects to form-auth server,
         logRedirect(MockFormAuthServer.Form1.class.getSimpleName()),
         // which renders form.
@@ -1202,7 +1202,7 @@ public class SamlSsoTest extends SecurityManagerTestCase {
    * Sets up mock session manager and enable kerberos
    */
   private void setupKerberos() {
-    setupSessionManager(integration.getSessionId());
+    smBackend.enableKerberos(true);
     setupKerberosGroup();
   }
 
@@ -1399,7 +1399,7 @@ public class SamlSsoTest extends SecurityManagerTestCase {
         integration.processPostForm(exchange2,
             singleCredentialParams(MockFormAuthServer.Form1.GOOD_USERNAME, BAD_PASSWORD)));
   }
-  
+
   /**
    * Test that we send a redirection when the user submits a POST request when in IDLE state, eg.
    * by hitting Back button after a successful authentication. This verifies the fix of b/8269568
@@ -1413,6 +1413,7 @@ public class SamlSsoTest extends SecurityManagerTestCase {
     // Fake the IDLE state (as we had successfully authenticated before)
     AuthnSession session = integration.getSession();
     ReflectionTestUtils.setField(session, "state", AuthnState.IDLE);
+    integration.saveSession(session);
     integration.setFollowRedirects(false); // We need to verify the redirection response itself
 
     HttpExchange exchange2 = integration.processPostForm(
@@ -1421,15 +1422,15 @@ public class SamlSsoTest extends SecurityManagerTestCase {
 
     // Verify the redirection back to search page
     integration.assertRedirect(exchange2, "/");
-    
+
     // Verify the whole sequence
     integration.checkExchangeLog(logSequence(
         logGet(MockServiceProvider.class.getSimpleName()),
         logRedirect(SamlAuthn.class.getSimpleName(),
             logGet(MockContentServer.class.getSimpleName()),
-            logRedirect(Form1.class.getSimpleName()), 
+            logRedirect(Form1.class.getSimpleName()),
             logOk()),
-        logOk(), 
+        logOk(),
         logPost(SamlAuthn.class.getSimpleName()),
         logResponse(HttpServletResponse.SC_FOUND)));
   }
@@ -1504,7 +1505,10 @@ public class SamlSsoTest extends SecurityManagerTestCase {
   public void testFailureRecoveryAuthenticatingState()
       throws IOException {
     integration.setTestName();
-    integration.makeSession().setForceControllerFailure(AuthnState.AUTHENTICATING);
+    AuthnSession authnSession = integration.makeSession();
+    authnSession.setForceControllerFailure(AuthnState.AUTHENTICATING);
+    integration.saveSession(authnSession);
+
     integration.assertServerErrorResult(integration.startSearch());
     integration.assertContentResult(1, trySingleGood());
   }
@@ -1516,7 +1520,11 @@ public class SamlSsoTest extends SecurityManagerTestCase {
   public void testFailureRecoveryUlfState()
       throws IOException {
     integration.setTestName();
-    integration.makeSession().setForceControllerFailure(AuthnState.IN_UL_FORM);
+
+    AuthnSession authnSession = integration.makeSession();
+    authnSession.setForceControllerFailure(AuthnState.IN_UL_FORM);
+    integration.saveSession(authnSession);
+
     integration.assertServerErrorResult(integration.startSearch());
     integration.assertContentResult(1, trySingleGood());
   }
@@ -1531,7 +1539,12 @@ public class SamlSsoTest extends SecurityManagerTestCase {
     setupSampleUrlGroup(fas1.getSampleUrl(), fas1.getSampleUrl());
     integration.setUserAgentCookie(MockFormAuthServer.Form1.COOKIE_NAME,
         COOKIE_VALUES.CS_REDIR_VALID_ONCE);
-    integration.makeSession().setForceControllerFailure(AuthnState.IN_CREDENTIALS_GATHERER);
+
+    AuthnSession authnSession = integration.makeSession();
+    authnSession.setForceControllerFailure(AuthnState.IN_CREDENTIALS_GATHERER);
+    integration.saveSession(authnSession);
+
+
     integration.assertServerErrorResult(integration.startSearch());
     // Reset the exchange log so that "recovery" sequence matches expectations.
     integration.resetExchangeLog();
@@ -1604,8 +1617,8 @@ public class SamlSsoTest extends SecurityManagerTestCase {
     mockExchange.exchange();
 
     // Check that the sec-mgr session ID ended up with the correct name.
-    assertEquals(integration.getSessionId(), AuthnSession.getInstance(request,
-        /*createGsaSmSessionIfNotExist=*/false).getSessionId());
+    assertEquals(integration.getSessionId(),
+        integration.getAuthnSessionManager().findSession(request));
   }
 
   // ---------------------------------------------------------------
@@ -1623,8 +1636,9 @@ public class SamlSsoTest extends SecurityManagerTestCase {
     ConfigSingleton.getConfig().setFlexAuthorizer(flexAuthorizer);
 
     // Make sure there's a session for this ID.
-    String sessionId = integration.getSessionId();
-    AuthnSession.getInstance(sessionId);
+    AuthnSession authnSession = integration.makeSession();
+    integration.saveSession(authnSession);
+    String sessionId = authnSession.getSessionId();
 
     Metadata metadata = integration.getMetadata();
     String localEntityId = C.entityIdForGsa(SecurityManagerTestCase.GSA_TESTING_ISSUER);
@@ -1707,15 +1721,16 @@ public class SamlSsoTest extends SecurityManagerTestCase {
     AuthnAuthority authority = mech.getAuthority();
     session.addVerification(authority,
         Verification.verified(Verification.NEVER_EXPIRES,
-            AuthnPrincipal.make(MockFormAuthServer.Form1.GOOD_USERNAME, 
+            AuthnPrincipal.make(MockFormAuthServer.Form1.GOOD_USERNAME,
                 session.getView(mech).getCredentialGroup().getName()),
             CredPassword.make(MockFormAuthServer.Form1.GOOD_PASSWORD)));
     session.addCookie(authority,
         GCookie.make(
             MockFormAuthServer.Form1.COOKIE_NAME,
             MockContentServer.COOKIE_VALUES.VALID.toString()));
+    integration.saveSession(session);
 
-    return integration.doAuthzQuery(urlString);
+    return integration.doAuthzQuery(urlString, session);
   }
 
   // ---------------------------------------------------------------
@@ -1765,11 +1780,10 @@ public class SamlSsoTest extends SecurityManagerTestCase {
           }
         });
 
-    integration.makeSession();
-    setupSessionManager(integration.getSessionId());
+    smBackend.enableKerberos(true);
     integration.assertStatusResult(SC_UNAUTHORIZED, integration.startSearch());
     integration.assertContentResult(submitKerberosResponse(KERBEROS_RESPONSE_GOOD));
-    assertEquals(stringToGroup(CONNECTOR_GROUPS_1, MockCMAuthServer.DEFAULT_GROUPS_NS, null), 
+    assertEquals(stringToGroup(CONNECTOR_GROUPS_1, MockCMAuthServer.DEFAULT_GROUPS_NS, null),
         integration.getSession().getVerifiedGroups());
     integration.checkExchangeLog(
         logSequence(
@@ -1809,8 +1823,7 @@ public class SamlSsoTest extends SecurityManagerTestCase {
                 .build()));
     ConfigSingleton.setConfig(config);
 
-    integration.makeSession();
-    setupSessionManager(integration.getSessionId());
+    smBackend.enableKerberos(true);
     integration.assertStatusResult(SC_UNAUTHORIZED, integration.startSearch());
     HttpExchange exchange = submitKerberosResponse(KERBEROS_RESPONSE_INVALID);
     integration.assertLoginFormResult(exchange);
@@ -1878,8 +1891,7 @@ public class SamlSsoTest extends SecurityManagerTestCase {
           }
         });
 
-    integration.makeSession();
-    setupSessionManager(integration.getSessionId());
+    smBackend.enableKerberos(true);
     integration.assertStatusResult(SC_UNAUTHORIZED, integration.startSearch());
     integration.assertContentResult(submitKerberosResponse(KERBEROS_RESPONSE_GOOD));
 
@@ -1903,14 +1915,14 @@ public class SamlSsoTest extends SecurityManagerTestCase {
             successfulLogSuffix()));
   }
 
-  public void testModuleGroups() 
+  public void testModuleGroups()
       throws IOException {
     integration.setTestName();
 
     AuthnMechanism mech1 = AuthnMechKerberos.make("mech1");
     AuthnMechanism mech2 = AuthnMechGroups.make("groups", AuthnMechanism.NO_TIME_LIMIT,
         AuthnMechGroups.getDefaultTrustDuration());
-    SecurityManagerConfig config = 
+    SecurityManagerConfig config =
         makeConfig(Lists.newArrayList(
             credGroupBuilder(0, true, false, false)
             .addMechanism(mech1)
@@ -1918,8 +1930,7 @@ public class SamlSsoTest extends SecurityManagerTestCase {
             .build()));
     ConfigSingleton.setConfig(config);
 
-    integration.makeSession();
-    setupSessionManager(integration.getSessionId());
+    smBackend.enableKerberos(true);
     GroupsUpdateModule groups = ConfigSingleton.getInstance(GroupsUpdateModule.class);
     groups.forceOverrideMembershipDataForTest(GROUPSFILENAME, GROUPSFEEDFILENAME);
 
@@ -1929,14 +1940,14 @@ public class SamlSsoTest extends SecurityManagerTestCase {
     assertEquals(KERBEROS_USER_GROUPS, integration.getSession().getView(mech2).getVerifiedGroups());
   }
 
-  public void testMultipleAuthnModulesWithGroups() 
+  public void testMultipleAuthnModulesWithGroups()
       throws ServletException, IOException {
     integration.setTestName();
     AuthnMechanism groupsMech1 =
         AuthnMechGroups.make("groups_1", AuthnMechanism.NO_TIME_LIMIT,
             AuthnMechGroups.getDefaultTrustDuration());
-    AuthnMechForm formMech = 
-        AuthnMechForm.make("form", fas1.getSampleUrl()); 
+    AuthnMechForm formMech =
+        AuthnMechForm.make("form", fas1.getSampleUrl());
 
 
     AuthnMechanism groupsMech2 =
@@ -1996,24 +2007,23 @@ public class SamlSsoTest extends SecurityManagerTestCase {
     GroupsUpdateModule groups = ConfigSingleton.getInstance(GroupsUpdateModule.class);
     groups.forceOverrideMembershipDataForTest(GROUPSFILENAME_2, GROUPSFEEDFILENAME_2);
 
-    integration.makeSession();
-    setupSessionManager(integration.getSessionId());
+    smBackend.enableKerberos(true);
     integration.startSearch();
     integration.assertContentResult(submitKerberosResponse(KERBEROS_RESPONSE_GOOD));
 
     assertEquals(GROUPS_1, integration.getSession().getView(groupsMech1).getVerifiedGroups());
     assertEquals(GROUPS_2, integration.getSession().getView(groupsMech2).getVerifiedGroups());
-    assertEquals(GROUPS_TOTAL, integration.getSession().getVerifiedGroups()); 
+    assertEquals(GROUPS_TOTAL, integration.getSession().getVerifiedGroups());
   }
 
-  public void testModuleGroupsRefuted() 
+  public void testModuleGroupsRefuted()
       throws IOException {
     integration.setTestName();
 
     AuthnMechanism mech1 = AuthnMechKerberos.make("mech1");
     AuthnMechanism mech2 = AuthnMechGroups.make("groups", AuthnMechanism.NO_TIME_LIMIT,
         AuthnMechGroups.getDefaultTrustDuration());
-    SecurityManagerConfig config = 
+    SecurityManagerConfig config =
         makeConfig(Lists.newArrayList(
             credGroupBuilder(0, true, false, false)
             .addMechanism(mech1)
@@ -2021,8 +2031,7 @@ public class SamlSsoTest extends SecurityManagerTestCase {
             .build()));
     ConfigSingleton.setConfig(config);
 
-    integration.makeSession();
-    setupSessionManager(integration.getSessionId());
+    smBackend.enableKerberos(true);
     GroupsUpdateModule groups = ConfigSingleton.getInstance(GroupsUpdateModule.class);
     groups.forceOverrideMembershipDataForTest(GROUPSFILENAME, GROUPSFEEDFILENAME);
 
@@ -2033,9 +2042,9 @@ public class SamlSsoTest extends SecurityManagerTestCase {
 
 
   /**
-   * Tests the runnability status of module which does group resolution is READY 
-   * even when the previous/other module which was run returns groups. 
-   * Also tests that Verfication with only GroupMembership does not remove other 
+   * Tests the runnability status of module which does group resolution is READY
+   * even when the previous/other module which was run returns groups.
+   * Also tests that Verfication with only GroupMembership does not remove other
    * verifications which contains groups.
    * Regression test for b/6512358.
    */
@@ -2054,7 +2063,7 @@ public class SamlSsoTest extends SecurityManagerTestCase {
 
     // Set up connector manager servlets.
     MockCMAuthServer cmAuthServer1 = new MockCMAuthServer();
-    cmAuthServer1.setPassword(CONNECTOR1, MockFormAuthServer.Form1.GOOD_USERNAME, 
+    cmAuthServer1.setPassword(CONNECTOR1, MockFormAuthServer.Form1.GOOD_USERNAME,
         null, MockFormAuthServer.Form1.GOOD_PASSWORD);
     for (String group : CONNECTOR_GROUPS_1) {
       cmAuthServer1.addGroup(CONNECTOR1, MockFormAuthServer.Form1.GOOD_USERNAME, null, group);
@@ -2085,13 +2094,13 @@ public class SamlSsoTest extends SecurityManagerTestCase {
         .addAll(stringToGroup(CONNECTOR_GROUPS_1, MockCMAuthServer.DEFAULT_GROUPS_NS, null))
         .addAll(stringToGroup(CONNECTOR_GROUPS_2, MockCMAuthServer.DEFAULT_GROUPS_NS, null))
         .build();
-    assertEquals(MockFormAuthServer.Form1.GOOD_USERNAME, 
+    assertEquals(MockFormAuthServer.Form1.GOOD_USERNAME,
         integration.getSession().getSnapshot().getView().getUsername());
-    assertEquals(MockFormAuthServer.Form1.GOOD_PASSWORD, 
-        integration.getSession().getSnapshot().getView().getPassword());    
+    assertEquals(MockFormAuthServer.Form1.GOOD_PASSWORD,
+        integration.getSession().getSnapshot().getView().getPassword());
     assertEquals(allGroups, integration.getSession().getVerifiedGroups());
   }
-  
+
   private Set<Group> stringToGroup(Set<String> groupNames, String namespace, String domain) {
     ImmutableSet.Builder<Group> groupBuilder = ImmutableSet.builder();
     for (String name : groupNames) {

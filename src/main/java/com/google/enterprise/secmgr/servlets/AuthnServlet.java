@@ -62,7 +62,7 @@ public class AuthnServlet extends ServletBase implements PostableHttpServlet {
   @Nonnull private final StringLockManager usernameLockManager;
 
   @Inject
-  private AuthnServlet(AuthnSessionManager sessionManager) {
+  public AuthnServlet(AuthnSessionManager sessionManager) {
     controller = ConfigSingleton.getInstance(AuthnController.class);
     trustManager = ConfigSingleton.getInstance(TrustManager.class);
     usernameLockManager = new StringLockManager();
@@ -74,6 +74,7 @@ public class AuthnServlet extends ServletBase implements PostableHttpServlet {
       throws IOException {
     AuthnSession.setSecureSearchApiMode(true);
     AuthnSession session = sessionManager.createSession();
+    session.setRequest(request);
 
     response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
     if (session == null) {

@@ -101,7 +101,7 @@ public class KerberosCredentialsGathererTest extends SecurityManagerTestCase {
                 .addMechanism(kerberosMechanism)
                 .addMechanism(otherMechanism)
                 .build()));
-    session = AuthnSession.getInstance(config);
+    session = AuthnSession.newInstance(config);
 
     control = EasyMock.createControl();
     mockElement = control.createMock(CredentialsGathererElement.class);

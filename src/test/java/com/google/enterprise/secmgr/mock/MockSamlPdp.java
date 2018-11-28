@@ -16,6 +16,7 @@ package com.google.enterprise.secmgr.mock;
 
 import static junit.framework.Assert.assertEquals;
 
+import com.google.enterprise.secmgr.authncontroller.AuthnSessionManager;
 import com.google.enterprise.secmgr.authzcontroller.Authorizer;
 import com.google.enterprise.secmgr.common.PostableHttpServlet;
 import com.google.enterprise.secmgr.common.Resource;
@@ -42,9 +43,9 @@ public class MockSamlPdp extends SamlServlet implements PostableHttpServlet {
   private final Map<String, SecmgrCredential> goldenCredentialMap;
 
   public MockSamlPdp(SamlSharedData sharedData, Map<String, SecmgrCredential> goldenCredentialMap,
-      AuthorizeWithCredential method) {
+      AuthorizeWithCredential method, AuthnSessionManager authnSessionManager) {
     super(sharedData);
-    pdp = SamlPdpBase.make(sharedData, new LocalAuthorizer(method));
+    pdp = SamlPdpBase.make(sharedData, new LocalAuthorizer(method), authnSessionManager);
     this.goldenCredentialMap = goldenCredentialMap;
   }
 

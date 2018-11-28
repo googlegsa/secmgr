@@ -327,9 +327,13 @@ public abstract class SamlIdpServlet extends SamlServlet {
     session.setRequestURI(request.getRequestURI());
   }
 
-  protected static void restoreSamlContext(AuthnSession session) {
+  protected static void restoreSamlContext(AuthnSession session) throws IOException {
     MockHttpServletRequest mockHttpServletRequest = new MockHttpServletRequest("GET",
         session.getRequestURI());
+    if (session.getSamlRequest() == null) {
+      // there was no SamlContext before, nothing to restore
+      return;
+    }
     mockHttpServletRequest.setServerName(session.getServerName());
     mockHttpServletRequest.setServerPort(session.getServerPort());
     mockHttpServletRequest.setScheme(session.getScheme());
@@ -337,15 +341,10 @@ public abstract class SamlIdpServlet extends SamlServlet {
     mockHttpServletRequest.setParameter("RelayState", session.getRelayState());
 
     GeneratedContext generatedContext;
-    try {
-      generatedContext = createAuthnContext(mockHttpServletRequest, new MockHttpServletResponse(),
-          SamlSharedData.getProductionInstance(SamlSharedData.Role.IDENTITY_PROVIDER));
-    } catch (IOException e) {
-      throw new RuntimeException("Unable restore saml context");
-    }
+    generatedContext = createAuthnContext(mockHttpServletRequest, new MockHttpServletResponse(),
+        SamlSharedData.getProductionInstance(SamlSharedData.Role.IDENTITY_PROVIDER));
     session.setSamlSsoContext(generatedContext.context);
   }
-
 
   public static class GeneratedContext {
     private final SAMLMessageContext<AuthnRequest, Response, NameID> context;
@@ -385,12 +384,6 @@ public abstract class SamlIdpServlet extends SamlServlet {
     try {
       runDecoder(new HTTPRedirectDeflateDecoder(getBasicParserPool()), context, decorator,
           AuthnRequest.DEFAULT_ELEMENT_NAME);
-    } catch (IOException e) {
-      if (e.getCause() instanceof MessageDecodingException) {
-        initErrorResponse(response, HttpServletResponse.SC_FORBIDDEN);
-        return null;
-      }
-      throw e;
     } catch (SecurityException e) {
       securityException = e;
     }

@@ -92,7 +92,7 @@ public class AuthorizationMapManagerImplTest extends SecurityManagerTestCase {
     super.setUp();
     integration.reset();
     ConfigSingleton.setConfig(config);
-    AuthnSession session = AuthnSession.getInstance(config);
+    AuthnSession session = AuthnSession.newInstance(config);
     session.addVerification(mech1.getAuthority(),
         Verification.verified(Verification.NEVER_EXPIRES,
             AuthnPrincipal.make("joe", CG1),

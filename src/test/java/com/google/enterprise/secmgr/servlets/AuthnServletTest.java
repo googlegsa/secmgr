@@ -18,6 +18,7 @@ package com.google.enterprise.secmgr.servlets;
 import static com.google.enterprise.secmgr.testing.ServletTestUtil.generatePostContent;
 import static com.google.enterprise.secmgr.testing.ServletTestUtil.makeMockHttpPost;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.enterprise.secmgr.authncontroller.AuthnSessionManager;
 import com.google.enterprise.secmgr.authncontroller.ExportedState;
@@ -89,7 +90,7 @@ public class AuthnServletTest extends SecurityManagerTestCase {
     mockRequest = makeMockHttpPost(null, url.toString());
 
     authnServletUri = URI.create(MockIntegration.getAuthnServletUrl(integration.getGsaHost()));
-    authnServlet = AuthnServlet.getTestingInstance();
+    authnServlet = new AuthnServlet(sessionManager);
     integration.getHttpTransport().registerServlet(
         MockIntegration.getAuthnServletUrl(integration.getGsaHost()), authnServlet);
 
@@ -141,7 +142,9 @@ public class AuthnServletTest extends SecurityManagerTestCase {
 
     HttpExchange ex = integration.doAuthnQuery(mockRequest, APP_SESSION_ID);
     integration.assertExchangeStatusOk(ex);
-    assertEquals(APP_SESSION_ID, ex.getResponseHeaderValue("GSA_SESSION_ID"));
+    assertNotNull("No session id in response",
+        Strings.emptyToNull(ex.getResponseHeaderValue("GSA_SESSION_ID")));
+
     assertEquals("user1", ex.getResponseHeaderValue("GSA_APP_ID"));
     String resp = ex.getResponseEntityAsString();
     ExportedState exportedState = ExportedState.fromJsonString(resp);
@@ -307,10 +310,9 @@ public class AuthnServletTest extends SecurityManagerTestCase {
       });
       testExecutor.execute(t);
     }
-    while (doneThreads.get() < numTimes) {
-      synchronized (this) {
-        this.wait(100);
-      }
+    testExecutor.shutdown();
+    if (!testExecutor.awaitTermination(1, TimeUnit.SECONDS)) {
+      fail("Failed with time out");
     }
     assertEquals(numTimes, successThreads.get());
   }
@@ -453,7 +455,8 @@ public class AuthnServletTest extends SecurityManagerTestCase {
 
     HttpExchange ex = integration.doAuthnQuery(mockRequest, APP_SESSION_ID);
     integration.assertExchangeStatusOk(ex);
-    assertEquals(USER_SESSION_ID, ex.getResponseHeaderValue("GSA_SESSION_ID"));
+    assertNotNull("No session id in response",
+        Strings.emptyToNull(ex.getResponseHeaderValue("GSA_SESSION_ID")));
     assertEquals(user, ex.getResponseHeaderValue("GSA_APP_ID"));
     String resp = ex.getResponseEntityAsString();
     ExportedState exportedState = ExportedState.fromJsonString(resp);
@@ -468,7 +471,8 @@ public class AuthnServletTest extends SecurityManagerTestCase {
 
     HttpExchange ex = integration.doAuthnQuery(mockRequest, APP_SESSION_ID);
     integration.assertExchangeStatusOk(ex);
-    assertEquals(USER_SESSION_ID, ex.getResponseHeaderValue("GSA_SESSION_ID"));
+    assertNotNull("No session id in response",
+        Strings.emptyToNull(ex.getResponseHeaderValue("GSA_SESSION_ID")));
     assertEquals(user, ex.getResponseHeaderValue("GSA_APP_ID"));
     String resp = ex.getResponseEntityAsString();
     ExportedState exportedState = ExportedState.fromJsonString(resp);
@@ -485,7 +489,8 @@ public class AuthnServletTest extends SecurityManagerTestCase {
 
     HttpExchange ex = integration.doAuthnQuery(mockRequest, APP_SESSION_ID);
     integration.assertExchangeStatusOk(ex);
-    assertEquals(APP_SESSION_ID, ex.getResponseHeaderValue("GSA_SESSION_ID"));
+    assertNotNull("No session id in response",
+        Strings.emptyToNull(ex.getResponseHeaderValue("GSA_SESSION_ID")));
     assertEquals(user, ex.getResponseHeaderValue("GSA_APP_ID"));
     String resp = ex.getResponseEntityAsString();
     ExportedState exportedState = ExportedState.fromJsonString(resp);

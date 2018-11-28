@@ -42,4 +42,6 @@ public interface AuthnSessionManager {
   void saveSession(AuthnSession authnSession);
 
   void updateSessionTTL(AuthnSession authnSession);
+
+  void setSessionIdleMillis(long sessionIdleMillis);
 }

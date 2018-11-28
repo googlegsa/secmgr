@@ -167,7 +167,7 @@ public class AuthnSession implements Serializable {
    */
   @Immutable
   @ParametersAreNonnullByDefault
-  public static final class ClientPair {
+  public static final class ClientPair implements Serializable {
     @Nonnull private final CredentialsGatherer gatherer;
     @Nonnull private final AuthnMechanism mechanism;
 
@@ -233,6 +233,23 @@ public class AuthnSession implements Serializable {
     clientPairs = null;
     this.setStateIdle();
     logger.info(logMessage("created new session."));
+  }
+
+  @VisibleForTesting
+  public static AuthnSession newInstance()
+      throws IOException {
+    return new AuthnSession(ConfigSingleton.getConfig(), SessionUtil.generateId());
+  }
+
+  @VisibleForTesting
+  public static AuthnSession newInstance(String sessionId)
+      throws IOException {
+    return new AuthnSession(ConfigSingleton.getConfig(), sessionId);
+  }
+
+  @VisibleForTesting
+  public static AuthnSession newInstance(SecurityManagerConfig config) {
+    return new AuthnSession(config, SessionUtil.generateId());
   }
 
   /**

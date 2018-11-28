@@ -94,13 +94,10 @@ public final class SamlPdpBase {
 
   @Nonnull private final SamlSharedData sharedData;
   @Nonnull private final Authorizer authorizer;
-  @Nonnull private final AuthnSessionManager sessionManager;
 
-  private SamlPdpBase(SamlSharedData sharedData, Authorizer authorizer,
-      AuthnSessionManager sessionManager) {
+  private SamlPdpBase(SamlSharedData sharedData, Authorizer authorizer) {
     this.sharedData = sharedData;
     this.authorizer = authorizer;
-    this.sessionManager = sessionManager;
   }
 
   /**
@@ -116,7 +113,7 @@ public final class SamlPdpBase {
     Preconditions.checkNotNull(sharedData);
     Preconditions.checkNotNull(authorizer);
     Preconditions.checkNotNull(sessionManager);
-    return new SamlPdpBase(sharedData, authorizer, sessionManager);
+    return new SamlPdpBase(sharedData, authorizer);
   }
 
   /**
@@ -136,13 +133,9 @@ public final class SamlPdpBase {
       long startDecoding = System.currentTimeMillis();
       DecodedRequest decodedRequest = decodeAuthzRequest(request);
       sessionId = decodedRequest.getSessionId();
-      AuthnSession session = sessionManager.findSessionById(sessionId);
-      if (session == null) {
-        logger.severe(SessionUtil.logMessage(sessionId, "Unable to find session"));
-      }
 
       long startAuthorizing = System.currentTimeMillis();
-      DecodedResponse decodedResponse = authorize(decodedRequest, decorator, session);
+      DecodedResponse decodedResponse = authorize(decodedRequest, decorator);
       long startEncoding = System.currentTimeMillis();
       ServletBase.initResponse(response);
       encodeAuthzResponse(decodedResponse, response, decorator);
@@ -329,10 +322,10 @@ public final class SamlPdpBase {
    * @return A decoded response.
    */
   @Nonnull
-  public DecodedResponse authorize(DecodedRequest request, Decorator decorator, AuthnSession session) {
+  public DecodedResponse authorize(DecodedRequest request, Decorator decorator) {
     AuthzResult result = request.violatedSecurityPolicy()
         ? AuthzResult.makeIndeterminate(Resource.resourcesToUrls(request.getResources()))
-        : authorizer.apply(request.getResources(), session,
+        : authorizer.apply(request.getResources(), request.getSessionId(),
             request.getAuthzMode() == GsaAuthz.Mode.FAST);
     ImmutableList.Builder<ResponseRecord> builder = ImmutableList.builder();
     for (RequestRecord record : request.getRecords()) {
@@ -344,9 +337,7 @@ public final class SamlPdpBase {
       }
       builder.add(new ResponseRecord(record, status));
     }
-    Status status = session != null ? makeSuccessfulStatus() : makeAuthnFailureStatus();
-
-    return new DecodedResponse(request, builder.build(), status);
+    return new DecodedResponse(request, builder.build());
   }
 
   /**
@@ -381,7 +372,6 @@ public final class SamlPdpBase {
     SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context = response.getContext();
     context.setOutboundSAMLMessage(
         makeAuthzResponse(
-            response.getStatus(),
             response.getSessionId(),
             response.getInResponseTo(),
             new DateTime(),
@@ -401,7 +391,6 @@ public final class SamlPdpBase {
       SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context = record.getContext();
       context.setOutboundSAMLMessage(
           makeAuthzResponse(
-              response.getStatus(),
               sessionId,
               record.getInResponseTo(),
               now,
@@ -423,7 +412,6 @@ public final class SamlPdpBase {
       throws IOException {
     Response samlResponse
         = makeAuthzResponse(
-            response.getStatus(),
             response.getSessionId(),
             response.getInResponseTo(),
             new DateTime(),
@@ -435,7 +423,7 @@ public final class SamlPdpBase {
     runEncoder(new HTTPSOAP11Encoder(), context, decorator);
   }
 
-  private Response makeAuthzResponse(Status status, String sessionId, String inResponseTo,
+  private Response makeAuthzResponse(/*Status status, */String sessionId, String inResponseTo,
       DateTime now, Iterable<ResponseRecord> records) {
     // Note: We disregard the Action in the query and always return an
     // assertion about Action.HTTP_GET_ACTION. It's the only thing we know how
@@ -454,7 +442,7 @@ public final class SamlPdpBase {
     return makeResponse(
         issuer,
         now,
-        status,
+        makeSuccessfulStatus(),
         inResponseTo,
         makeAssertion(issuer, now, makeSubject(sessionId), null, statements));
   }
@@ -581,15 +569,12 @@ public final class SamlPdpBase {
   public static final class DecodedResponse {
     @Nonnull private final DecodedRequest request;
     @Nonnull private final ImmutableList<ResponseRecord> responseRecords;
-    @Nonnull private final Status status;
 
-    private DecodedResponse(DecodedRequest request, ImmutableList<ResponseRecord> responseRecords,
-        Status status) {
+    private DecodedResponse(DecodedRequest request, ImmutableList<ResponseRecord> responseRecords) {
       Preconditions.checkNotNull(request);
       Preconditions.checkNotNull(responseRecords);
       this.request = request;
       this.responseRecords = responseRecords;
-      this.status = status;
     }
 
     @Nonnull
@@ -615,11 +600,6 @@ public final class SamlPdpBase {
     @Nonnull
     private ImmutableList<ResponseRecord> getResponseRecords() {
       return responseRecords;
-    }
-
-    @Nonnull
-    public Status getStatus() {
-      return status;
     }
   }
 

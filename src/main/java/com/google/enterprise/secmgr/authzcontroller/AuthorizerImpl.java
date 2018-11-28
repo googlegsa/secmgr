@@ -21,7 +21,6 @@ import com.google.enterprise.secmgr.authncontroller.AuthnSession;
 import com.google.enterprise.secmgr.authncontroller.AuthnSessionManager;
 import com.google.enterprise.secmgr.authncontroller.SessionSnapshot;
 import com.google.enterprise.secmgr.common.Resource;
-import com.google.enterprise.secmgr.common.SessionUtil;
 import com.google.enterprise.secmgr.modules.AuthzResult;
 import com.google.inject.Singleton;
 
@@ -61,8 +60,9 @@ public final class AuthorizerImpl implements Authorizer {
   }
 
   @Override
-  public AuthzResult apply(Collection<Resource> resources, AuthnSession session,
+  public AuthzResult apply(Collection<Resource> resources, String sessionId,
       boolean enableFastAuthz) {
+    AuthnSession session = sessionManager.findSessionById(sessionId);
     if (session == null) {
       return AuthzResult.makeIndeterminate(Resource.resourcesToUrls(resources));
     }

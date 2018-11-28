@@ -246,6 +246,9 @@ class BackendFilesBase implements BackendInterfaceBase {
    */
   public void writeData(String sessionId, String key, String contents)
       throws IndexOutOfBoundsException {
+    // temporary hack
+    File newdir = new File(sessionDirName(sessionId));
+    newdir.mkdirs();
     writeData(sessionId, key, Utils.toBytesUtf8(contents));
   }
 

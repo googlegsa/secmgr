@@ -33,11 +33,11 @@ public interface Authorizer {
    * Runs this authorizer on some resources.
    *
    * @param resources Some resources to be authorized.
-   * @param session A session to use for authorization.
+   * @param sessionId A session to use for authorization.
    * @param enableFastAuthz If true, only use "fast" authorization mechanisms.
    * @return The authorization results for the given resources.
    */
   @Nonnull
-  public AuthzResult apply(Collection<Resource> resources, AuthnSession session,
+  AuthzResult apply(Collection<Resource> resources, String sessionId,
       boolean enableFastAuthz);
 }

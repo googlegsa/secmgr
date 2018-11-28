@@ -15,8 +15,6 @@
 package com.google.enterprise.secmgr.authncontroller;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.enterprise.secmgr.common.SecurityManagerUtil;
 import com.google.enterprise.secmgr.common.SessionUtil;
 import com.google.enterprise.secmgr.config.ConfigSingleton;
@@ -29,10 +27,7 @@ import java.security.SecureRandom;
 import java.util.Formatter;
 import java.util.Random;
 import javax.servlet.http.HttpServletRequest;
-import org.joda.time.DateTimeUtils;
 
-import java.util.List;
-import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.annotation.concurrent.GuardedBy;
@@ -69,11 +64,14 @@ public final class AuthnSessionManagerImpl implements AuthnSessionManager {
 
   @Override
   public AuthnSession findSession(HttpServletRequest request) {
-    String sessionId = SessionUtil.findGsaSessionId(request);
     AuthnSession session = (AuthnSession) request.getAttribute(AuthnSession.AUTHN_SESSION);
     if (session != null) {
       return session;
     } else {
+      String sessionId = SessionUtil.findGsaSessionId(request);
+      if (sessionId == null) {
+        return null;
+      }
       session = findSessionById(sessionId);
       request.setAttribute(AuthnSession.AUTHN_SESSION, session);
       return session;
@@ -95,7 +93,7 @@ public final class AuthnSessionManagerImpl implements AuthnSessionManager {
 
   @Override
   public void saveSession(AuthnSession authnSession) {
-    redisRepository.storeSession(authnSession);
+    redisRepository.storeSession(authnSession, sessionIdleMillis);
   }
 
   @Override
@@ -121,6 +119,11 @@ public final class AuthnSessionManagerImpl implements AuthnSessionManager {
   @VisibleForTesting
   long getSessionIdleMillis() {
     return sessionIdleMillis;
+  }
+
+  @Override
+  public synchronized void setSessionIdleMillis(long sessionIdleMillis) {
+    this.sessionIdleMillis = sessionIdleMillis;
   }
 
   @VisibleForTesting
