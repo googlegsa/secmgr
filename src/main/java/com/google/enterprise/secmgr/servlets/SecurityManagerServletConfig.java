@@ -117,7 +117,7 @@ public class SecurityManagerServletConfig extends GuiceServletContextListener {
     }
 
     String configPath = getConfigPath();
-    injector =  makeInjector(configPath, new LocalServletModule());
+    injector =  makeInjector(configPath, new LocalServletModule(), new ConfigurationModule());
     return injector;
   }
 
@@ -209,6 +209,14 @@ public class SecurityManagerServletConfig extends GuiceServletContextListener {
         serve(entry.getKey()).with(entry.getValue());
       }
       filter("/*").through(SessionFilter.class);
+    }
+  }
+
+  private static final class ConfigurationModule extends AbstractModule {
+    @Override
+    protected void configure() {
+      bindConstant().annotatedWith(Names.named("redis-connection-string"))
+          .to("redis://redis:6379/0");
     }
   }
 

@@ -26,7 +26,6 @@ import org.opensaml.common.binding.artifact.SAMLArtifactMap.SAMLArtifactMapEntry
 public class RedisRepository {
 
   public static final long SESSION_TTL_SEC = SecurityManagerUtil.getGsaSessionIdleMillis() / 1000;
-  public static final SetArgs SESSION_TTL = Builder.ex(SESSION_TTL_SEC);
   public static final SetArgs ARTIFACT_TTL = Builder.ex(SamlSharedData.DEFAULT_ARTIFACT_LIFETIME_MS / 1000);
   private RedisCommands<String, Object> redisCommands;
 
