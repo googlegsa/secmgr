@@ -24,8 +24,10 @@ import javax.servlet.http.HttpServletRequest;
  */
 public interface AuthnSessionManager {
 
-  AuthnSession createPersistentSession(HttpServletRequest request) throws IOException;
-
+  /**
+   * Creates new session and attach it to request.
+   */
+  AuthnSession createAttachedSession(HttpServletRequest request) throws IOException;
 
   /**
    * Get a previously-registered session.

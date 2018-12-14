@@ -76,7 +76,7 @@ public class SamlAuthn extends SamlIdpServlet
         restoreSamlContext(session);
       } else {
         // create brand new session
-        session = authnSessionManager.createPersistentSession(request);
+        session = authnSessionManager.createAttachedSession(request);
       }
       if (session == null) {
         logger.warning(decorator.apply("Could not get/make session; abandoning request."));

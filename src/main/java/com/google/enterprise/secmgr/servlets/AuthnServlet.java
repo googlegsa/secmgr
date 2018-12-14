@@ -15,7 +15,6 @@
  */
 package com.google.enterprise.secmgr.servlets;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.enterprise.common.StringLockManager;
 import com.google.enterprise.secmgr.authncontroller.AuthnController;
@@ -142,7 +141,7 @@ public class AuthnServlet extends ServletBase implements PostableHttpServlet {
       Object usernameLock = usernameLockManager.acquire(endUser);
       try {
         synchronized (usernameLock) {
-          userSession = sessionManager.createPersistentSession(request);
+          userSession = sessionManager.createAttachedSession(request);
           userSession.addCredentials(endUser, namespace, password);
         }
       } catch (IOException e) {

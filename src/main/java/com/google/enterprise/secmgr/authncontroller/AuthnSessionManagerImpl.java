@@ -79,7 +79,7 @@ public final class AuthnSessionManagerImpl implements AuthnSessionManager {
   }
 
   @Override
-  public AuthnSession createPersistentSession(HttpServletRequest request) throws IOException {
+  public AuthnSession createAttachedSession(HttpServletRequest request) throws IOException {
     AuthnSession session = createSession();
     request.setAttribute(AuthnSession.AUTHN_SESSION, session);
     return session;
