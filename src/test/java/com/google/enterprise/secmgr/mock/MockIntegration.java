@@ -149,7 +149,7 @@ public class MockIntegration {
   // User agent.
   private final CookieStore userAgentCookies;
   private final MockHttpClient userAgent;
-  private String sessionId;           ////   TODO(dturbai): TO BE REMOVED
+  private String sessionId;
   private Decorator decorator;
   private String testName;
   private int testNameCounter;

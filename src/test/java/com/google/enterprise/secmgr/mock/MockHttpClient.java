@@ -303,8 +303,7 @@ public class MockHttpClient implements HttpClientInterface {
       // Only add those cookies that are applicable to the request URL.
       CookieStore toSend = GCookie.makeStore();
       for (GCookie cookie : exchangeCookies) {
-        // TODO(dturbai): url - is URL for previous http request but not the URL for current exchange.
-        if (cookie.isGoodFor(HttpUtil.toUri(url)) || cookie.getName().equals(GSA_SESSION_ID_COOKIE_NAME)) { // MUST BE FIXED!!!!!
+        if (cookie.isGoodFor(HttpUtil.toUri(url)) || cookie.getName().equals(GSA_SESSION_ID_COOKIE_NAME)) {
           toSend.add(cookie);
         }
       }
