@@ -109,9 +109,11 @@ public abstract class ResponseGenerator {
   }
 
   protected AttributeStatement buildAttributeStatement(SessionSnapshot snapshot) {
-    Attribute attribute = makeAttribute(ExportedState.ATTRIBUTE_NAME);
-    attribute.getAttributeValues()
+    Attribute exportedStateAttribute = makeAttribute(ExportedState.ATTRIBUTE_NAME);
+    exportedStateAttribute.getAttributeValues()
         .add(makeAttributeValue(ExportedState.make(snapshot).toJsonString()));
-    return makeAttributeStatement(attribute);
+    Attribute sessionIdAttribute = makeAttribute("SessionId");
+    sessionIdAttribute.getAttributeValues().add(makeAttributeValue(snapshot.getSessionId()));
+    return makeAttributeStatement(exportedStateAttribute, sessionIdAttribute);
   }
 }

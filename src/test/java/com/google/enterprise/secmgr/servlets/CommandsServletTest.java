@@ -46,6 +46,7 @@ public class CommandsServletTest extends SecurityManagerTestCase {
   private String testSessionId1 = "4156029ff937c3a4f120e4b41ac00015";
   private String jsonAuthnInfo = "";
   private AuthnSession authnSession;
+  private AuthnSessionManager authnsm;
 
   @Override
   public void setUp() throws Exception {
@@ -57,18 +58,18 @@ public class CommandsServletTest extends SecurityManagerTestCase {
     commandsServlet = CommandsServlet.makeTestInstance();
 
     //Initialize transport
-    transport = new MockHttpTransport();
+    transport = ConfigSingleton.getInstance(MockHttpTransport.class);
     secmgrUrl = new URL(urlString);
     client = new MockHttpClient(transport);
 
     transport.registerServlet(urlString, commandsServlet,
         MockHttpTransport.ServletCapabilities.GETTABLE_AND_POSTABLE);
 
-    AuthnSessionManager authnsm = ConfigSingleton.getInstance(AuthnSessionManager.class);
+    authnsm = ConfigSingleton.getInstance(AuthnSessionManager.class);
 
-    authnSession = AuthnSession.getInstance(testSessionId1);
+    authnSession = AuthnSession.newInstance(testSessionId1);
     authnSession.importSessionState(AuthnSessionState.empty());
-    authnsm.registerSession(authnSession);
+    authnsm.saveSession(authnSession);
 
     exchange = client.postExchange(secmgrUrl, null);
   }
@@ -85,6 +86,7 @@ public class CommandsServletTest extends SecurityManagerTestCase {
 
     ExportedState serverState = ExportedState.fromJsonString(jsonAuthnInfo);
     authnSession.importSessionState(serverState.getSessionState());
+    authnsm.saveSession(authnSession);
 
     String requestBody = "<Commands><GetAuthNInfo></GetAuthNInfo><SessionId>"
       + testSessionId1 + "</SessionId></Commands>";
@@ -106,7 +108,8 @@ public class CommandsServletTest extends SecurityManagerTestCase {
       + "</SetAuthNInfo><SessionId>" + testSessionId1 + "</SessionId></Commands>";
     String responseBody = executeRequest(requestBody);
 
-    assertTrue(!authnSession.getSnapshot().getState().isEmpty());
+    AuthnSession mostRecentSessionState = authnsm.findSessionById(testSessionId1);
+    assertTrue(!mostRecentSessionState.getSnapshot().getState().isEmpty());
   }
 
   private String executeRequest(String requestBody) throws IOException{

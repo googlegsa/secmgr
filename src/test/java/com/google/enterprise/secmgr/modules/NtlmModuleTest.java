@@ -59,9 +59,9 @@ public class NtlmModuleTest extends SecurityManagerTestCase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    session = AuthnSession.getInstance(config);
+    session = AuthnSession.newInstance(config);
     MockNtlmAuthServer server = new MockNtlmAuthServer(null, ImmutableMap.of("joe", "plumber"));
-    MockHttpTransport transport = new MockHttpTransport();
+    MockHttpTransport transport = ConfigSingleton.getInstance(MockHttpTransport.class);
     transport.registerServlet(SAMPLE_URL_1, server);
     HttpClientUtil.setHttpClient(new MockHttpClient(transport));
   }

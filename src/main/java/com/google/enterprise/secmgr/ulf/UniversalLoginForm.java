@@ -20,6 +20,7 @@ import com.google.enterprise.secmgr.common.HttpUtil.FormParameterCodingException
 
 import java.io.IOException;
 
+import java.io.Serializable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -35,7 +36,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 @Immutable
 @ParametersAreNonnullByDefault
-public class UniversalLoginForm {
+public class UniversalLoginForm implements Serializable {
 
   @Nonnull private final ImmutableList<FormElement> formElements;
   @Nonnull private final UniversalLoginFormHtml formHtml;

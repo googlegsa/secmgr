@@ -27,6 +27,7 @@ import com.google.enterprise.secmgr.json.TypeProxy;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
+import java.io.Serializable;
 import org.joda.time.DateTimeUtils;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
@@ -45,7 +46,7 @@ import javax.annotation.concurrent.Immutable;
  */
 @Immutable
 @ParametersAreNonnullByDefault
-public final class Verification {
+public final class Verification implements Serializable {
 
   /**
    * A value for a verification expiration time that means the verification

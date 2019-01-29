@@ -20,6 +20,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -34,7 +35,7 @@ import java.util.logging.Logger;
  * A simple implementation of UniversalLoginFormCustomization that can store/read
  * its configuration to/from a file.
  */
-public class FileBackedCustomization implements UniversalLoginFormCustomization {
+public class FileBackedCustomization implements UniversalLoginFormCustomization, Serializable {
   private static final Logger logger = Logger.getLogger(FileBackedCustomization.class.getName());
 
   /** The name of the serialized Properties file. */

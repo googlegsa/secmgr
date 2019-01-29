@@ -235,7 +235,7 @@ public class GroupsUpdateModuleTest extends SecurityManagerTestCase {
     }
 
     public void resetSession() {
-      session = AuthnSession.getInstance(config);
+      session = AuthnSession.newInstance(config);
     }
 
     public void addVerification(String cgName, String username, String cg, String ad) {

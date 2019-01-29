@@ -14,45 +14,25 @@
 
 package com.google.enterprise.secmgr.servlets;
 
-import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getAuthnRequestsSignedRule;
-import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getBasicParserPool;
-import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getRedirectSignatureRule;
-import static com.google.enterprise.secmgr.saml.OpenSamlUtil.initializeSecurityPolicy;
-import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAssertionConsumerService;
-import static com.google.enterprise.secmgr.saml.OpenSamlUtil.runDecoder;
-import static org.opensaml.common.xml.SAMLConstants.SAML2_ARTIFACT_BINDING_URI;
-
 import com.google.enterprise.secmgr.authncontroller.AuthnController;
 import com.google.enterprise.secmgr.authncontroller.AuthnSession;
 import com.google.enterprise.secmgr.authncontroller.AuthnSession.AuthnState;
+import com.google.enterprise.secmgr.authncontroller.AuthnSessionManager;
 import com.google.enterprise.secmgr.common.Decorator;
 import com.google.enterprise.secmgr.common.GettableHttpServlet;
 import com.google.enterprise.secmgr.common.HttpUtil;
 import com.google.enterprise.secmgr.common.PostableHttpServlet;
 import com.google.enterprise.secmgr.common.SessionUtil;
-import com.google.enterprise.secmgr.config.ConfigSingleton;
 import com.google.enterprise.secmgr.saml.SamlSharedData;
 import com.google.inject.Singleton;
-
-import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.saml2.binding.decoding.HTTPRedirectDeflateDecoder;
-import org.opensaml.saml2.core.AuthnRequest;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.Response;
-import org.opensaml.saml2.metadata.AssertionConsumerService;
-import org.opensaml.saml2.metadata.Endpoint;
-import org.opensaml.ws.message.decoder.MessageDecodingException;
-import org.opensaml.ws.transport.http.HttpServletRequestAdapter;
-import org.opensaml.xml.security.SecurityException;
-
 import java.io.IOException;
 import java.util.logging.Logger;
-
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.opensaml.ws.message.decoder.MessageDecodingException;
 
 /**
  * Handler for SAML authentication requests.  These requests are sent by a service provider, in our
@@ -67,11 +47,13 @@ public class SamlAuthn extends SamlIdpServlet
   // TODO: I18N this message.
   protected static final String PLEASE_ENABLE_COOKIES_MSG = "Please enable cookies";
   @Nonnull private final AuthnController controller;
+  private final AuthnSessionManager authnSessionManager;
 
   @Inject
-  private SamlAuthn() {
+  public SamlAuthn(AuthnSessionManager sessionManager, AuthnController controller) {
     super(SamlSharedData.getProductionInstance(SamlSharedData.Role.IDENTITY_PROVIDER));
-    controller = ConfigSingleton.getInstance(AuthnController.class);
+    this.controller = controller;
+    this.authnSessionManager = sessionManager;
   }
 
   /**
@@ -86,17 +68,24 @@ public class SamlAuthn extends SamlIdpServlet
     Decorator decorator = SessionUtil.getLogDecorator(request);
     controller.setSecureSearchApiMode(false);
     AuthnSession.setSecureSearchApiMode(false);
-    AuthnSession session = AuthnSession.getInstance(request,
-        /*createGsaSmSessionIfNotExist=*/true);
-    if (session == null) {
-      logger.warning(decorator.apply("Could not get/make session; abandoning request."));
-      initNormalResponseWithHeaders(response, HttpServletResponse.SC_EXPECTATION_FAILED)
-        .print(PLEASE_ENABLE_COOKIES_MSG);
-      return;
-    }
-    session.logIncomingRequest(request);
+    /*try to reuse existing session*/
 
+    AuthnSession session = authnSessionManager.findSession(request);
     try {
+      if (session != null) {
+        restoreSamlContext(session);
+      } else {
+        // create brand new session
+        session = authnSessionManager.createAttachedSession(request);
+      }
+      if (session == null) {
+        logger.warning(decorator.apply("Could not get/make session; abandoning request."));
+        initNormalResponseWithHeaders(response, HttpServletResponse.SC_EXPECTATION_FAILED)
+            .print(PLEASE_ENABLE_COOKIES_MSG);
+        return;
+      }
+
+      session.logIncomingRequest(request);
 
       // If the session is newly created in AuthnSession#getInstance due to
       // createGsaSmSessionIfNotExist is set to true, then it must be in
@@ -108,92 +97,34 @@ public class SamlAuthn extends SamlIdpServlet
       }
 
       // Establish the SAML message context.
-      SAMLMessageContext<AuthnRequest, Response, NameID> context = makeSamlMessageContext(request);
-      initializeSecurityPolicy(context,
-          getAuthnRequestsSignedRule(),
-          getRedirectSignatureRule());
+      GeneratedContext generatedContext = createAuthnContext(request, response, getSharedData());
 
-      // Decode the request.
-      context.setInboundMessageTransport(new HttpServletRequestAdapter(request));
-      SecurityException securityException = null;
-      try {
-        runDecoder(new HTTPRedirectDeflateDecoder(getBasicParserPool()), context, decorator,
-            AuthnRequest.DEFAULT_ELEMENT_NAME);
-      } catch (IOException e) {
-        if (e.getCause() instanceof MessageDecodingException) {
-          initErrorResponse(response, HttpServletResponse.SC_FORBIDDEN);
-          return;
-        }
-        throw e;
-      } catch (SecurityException e) {
-        securityException = e;
+      if (generatedContext == null) {
+        return;
       }
-
-      // Now, some complicated logic to determine where to send the response.
-      Endpoint embeddedEndpoint = getEmbeddedEndpoint(context.getInboundSAMLMessage());
-      if (embeddedEndpoint == null) {
-        // Normal case: we use metadata to identify the peer.
-        initializePeerEntity(context,
-            AssertionConsumerService.DEFAULT_ELEMENT_NAME,
-            SAML2_ARTIFACT_BINDING_URI);
-        // If there's no metadata available, we can't process the request.
-        // Generate an error and send it back to the user agent.
-        if (context.getPeerEntityMetadata() == null && securityException == null) {
-          securityException
-              = new SecurityException(
-                  "Service provider didn't provide an assertion consumer endpoint.");
-        }
-      } else {
-        // We have an embedded endpoint.
-        if (context.isIssuerAuthenticated()) {
-          // If the message is signed, then send the response to the embedded
-          // endpoint.
-          context.setPeerEntityEndpoint(embeddedEndpoint);
-        } else {
-          // Otherwise, use metadata to determine the endpoint.
-          initializePeerEntity(context,
-              AssertionConsumerService.DEFAULT_ELEMENT_NAME,
-              SAML2_ARTIFACT_BINDING_URI);
-          // If there's no metadata, send an error response to the embedded
-          // endpoint.
-          if (context.getPeerEntityMetadata() == null) {
-            context.setPeerEntityEndpoint(embeddedEndpoint);
-            if (securityException == null) {
-              securityException = new SecurityException("Unable to authenticate request issuer");
-            }
-          }
-        }
-      }
-
       // If we are here, we've received a valid SAML SSO request.  If the GET
       // request was not a SAML SSO request, an error would have been signalled
       // during decoding and we wouldn't reach this point.
-      session.setStateAuthenticating(HttpUtil.getRequestUrl(request, false), context);
+      session.setStateAuthenticating(HttpUtil.getRequestUrl(request, false),
+          generatedContext.getContext());
 
-      // If the incoming request violated security policy, return now with
-      // failure.  This must happen AFTER going into "authenticating" state, so
-      // that the SAML response is properly generated.
-      if (securityException != null) {
-        failFromException(securityException, session, request, response);
+      prepareSamlContextForSerialization(request, session);
+
+      if (generatedContext.getSecurityException() != null) {
+        failFromException(generatedContext.getSecurityException(), session, request, response);
         return;
       }
 
       // Start authentication process.
       doAuthn(session, request, response);
 
-    } catch (IOException e) {
-      failFromException(e, session, request, response);
-    } catch (RuntimeException e) {
+    } catch (IOException | RuntimeException e) {
+      if (e.getCause() instanceof MessageDecodingException) {
+        initErrorResponse(response, HttpServletResponse.SC_FORBIDDEN);
+        return;
+      }
       failFromException(e, session, request, response);
     }
-  }
-
-  private Endpoint getEmbeddedEndpoint(AuthnRequest authnRequest) {
-    String url = authnRequest.getAssertionConsumerServiceURL();
-    String binding = authnRequest.getProtocolBinding();
-    return (url != null && binding != null)
-        ? makeAssertionConsumerService(url, binding)
-        : null;
   }
 
   @Override
@@ -201,19 +132,17 @@ public class SamlAuthn extends SamlIdpServlet
       throws IOException {
     controller.setSecureSearchApiMode(false);
     AuthnSession.setSecureSearchApiMode(false);
-    AuthnSession session = AuthnSession.getInstance(request,
-        /*createGsaSmSessionIfNotExist=*/false);
+    AuthnSession session = authnSessionManager.findSession(request);
     if (session == null) {
       failNoSession(request, response);
       return;
     }
+    restoreSamlContext(session);
     session.logIncomingRequest(request);
     try {
       session.assertState(AuthnState.IN_UL_FORM, AuthnState.IN_CREDENTIALS_GATHERER);
       doAuthn(session, request, response);
-    } catch (IOException e) {
-      failFromException(e, session, request, response);
-    } catch (RuntimeException e) {
+    } catch (IOException | RuntimeException e) {
       failFromException(e, session, request, response);
     }
   }

@@ -25,6 +25,7 @@ import com.google.enterprise.secmgr.json.TypeProxy;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -37,7 +38,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  * to share a common username and password.
  */
 @Immutable
-public class CredentialGroup {
+public class CredentialGroup implements Serializable {
 
   public static final String DEFAULT_NAME = "Default";
 

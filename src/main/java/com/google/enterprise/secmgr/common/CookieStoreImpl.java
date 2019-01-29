@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
+import java.io.Serializable;
 import org.joda.time.DateTimeUtils;
 
 import java.util.AbstractCollection;
@@ -39,7 +40,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 @ParametersAreNonnullByDefault
 final class CookieStoreImpl extends AbstractCollection<GCookie>
-    implements CookieStore {
+    implements CookieStore, Serializable {
 
   @Nonnull private final Map<GCookie.Key, GCookie> map;
 

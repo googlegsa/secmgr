@@ -22,10 +22,14 @@ import com.google.enterprise.secmgr.common.Decorator;
 import com.google.enterprise.secmgr.common.GCookie;
 import com.google.enterprise.secmgr.common.SessionUtil;
 import com.google.enterprise.secmgr.config.AuthnMechanism;
+import com.google.enterprise.secmgr.config.ConfigSingleton;
 import com.google.enterprise.secmgr.config.CredentialGroup;
 import com.google.enterprise.secmgr.config.SecurityManagerConfig;
 import com.google.enterprise.secmgr.identity.Verification;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
 import org.joda.time.DateTimeUtils;
 import org.joda.time.format.ISODateTimeFormat;
 
@@ -45,12 +49,12 @@ import javax.servlet.http.HttpServletRequest;
  */
 @Immutable
 @ParametersAreNonnullByDefault
-public final class SessionSnapshot {
+public final class SessionSnapshot implements Serializable {
   @Nonnull private final String sessionId;
   @Nullable private final String requestId;
   //TODO: Replace this with an immutable info.
   @Nullable private final HttpServletRequest request;
-  @Nonnull private final SecurityManagerConfig config;
+  @Nonnull transient private SecurityManagerConfig config;
   @Nullable private final URL authnEntryUrl;
   @Nonnull private final ImmutableCollection<GCookie> userAgentCookies;
   @Nonnull private final AuthnSessionState state;
@@ -263,5 +267,11 @@ public final class SessionSnapshot {
     builder.append(sessionId);
     builder.append("}");
     return builder.toString();
+  }
+
+  private void readObject(ObjectInputStream is)
+      throws ClassNotFoundException, IOException {
+    is.defaultReadObject();
+    this.config = ConfigSingleton.getConfig();
   }
 }

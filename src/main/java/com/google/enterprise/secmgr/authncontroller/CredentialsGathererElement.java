@@ -14,6 +14,7 @@
 
 package com.google.enterprise.secmgr.authncontroller;
 
+import java.io.Serializable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
@@ -23,7 +24,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
  * process a single identity.
  */
 @ParametersAreNonnullByDefault
-public interface CredentialsGathererElement {
+public interface CredentialsGathererElement  extends Serializable {
 
   /**
    * Gets the credentials gatherer this is an element for.

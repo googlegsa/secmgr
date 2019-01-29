@@ -146,8 +146,8 @@ public class ConnectorModuleTest extends SecurityManagerTestCase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    session = AuthnSession.getInstance(config);
-    MockHttpTransport transport = new MockHttpTransport();
+    session = AuthnSession.newInstance(config);
+    MockHttpTransport transport = ConfigSingleton.getInstance(MockHttpTransport.class);
     HttpClientUtil.setHttpClient(new MockHttpClient(transport));
 
     cmAuthServer1 = new MockCMAuthServer();

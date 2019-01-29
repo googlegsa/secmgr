@@ -20,6 +20,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+import java.io.Serializable;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -42,7 +43,7 @@ import javax.annotation.concurrent.NotThreadSafe;
  */
 @Immutable
 @ParametersAreNonnullByDefault
-public abstract class Chain<E> implements Iterable<E> {
+public abstract class Chain<E> implements Iterable<E>, Serializable {
 
   @Nonnull private static final Chain<?> EMPTY_CHAIN = new EmptyChain<Object>();
 

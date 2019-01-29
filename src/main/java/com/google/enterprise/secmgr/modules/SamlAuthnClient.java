@@ -42,6 +42,9 @@ import com.google.enterprise.secmgr.saml.HttpExchangeToOutTransport;
 import com.google.enterprise.secmgr.saml.Metadata;
 import com.google.enterprise.secmgr.saml.SamlSharedData;
 
+import java.io.ObjectInputStream;
+import java.io.Serializable;
+import java.net.URI;
 import org.joda.time.DateTime;
 import org.opensaml.common.SAMLObject;
 import org.opensaml.common.binding.SAMLMessageContext;
@@ -107,7 +110,7 @@ import javax.servlet.http.HttpServletResponse;
  */
 @ThreadSafe
 @ParametersAreNonnullByDefault
-public final class SamlAuthnClient {
+public final class SamlAuthnClient implements Serializable {
   private static final String SM_PROVIDER_NAME = "Google Enterprise Security Manager";
   private static final Object REQUEST_ID_LOCK = new Object();
   private static final Logger logger = Logger.getLogger(SamlAuthnClient.class.getName());
@@ -118,19 +121,21 @@ public final class SamlAuthnClient {
    */
   public static final int DEFAULT_TIMEOUT = -1;
 
-  @Nonnull private final Metadata metadata;
+  @Nonnull transient private Metadata metadata;
   @Nonnull private final String peerEntityId;
-  @Nonnull private final SamlSharedData sharedData;
+  @Nonnull transient private SamlSharedData sharedData;
   private final int timeout;
+  private final URI metadataUri;
 
   @GuardedBy("REQUEST_ID_LOCK") private String requestId;
 
   private SamlAuthnClient(Metadata metadata, String peerEntityId, SamlSharedData sharedData,
-      int timeout) {
+      int timeout, URI metadataUri) {
     this.metadata = metadata;
     this.peerEntityId = peerEntityId;
     this.sharedData = sharedData;
     this.timeout = timeout;
+    this.metadataUri = metadataUri;
   }
 
   /**
@@ -146,27 +151,13 @@ public final class SamlAuthnClient {
    */
   @Nonnull
   public static SamlAuthnClient make(Metadata metadata, String peerEntityId,
-      SamlSharedData sharedData, int timeout) {
+      SamlSharedData sharedData, int timeout, URI metadataUri) {
     Preconditions.checkNotNull(metadata);
     Preconditions.checkNotNull(peerEntityId);
     Preconditions.checkNotNull(sharedData);
     Preconditions.checkArgument(sharedData.getRole() == SamlSharedData.Role.SERVICE_PROVIDER);
     Preconditions.checkArgument(timeout >= 0 || timeout == DEFAULT_TIMEOUT);
-    return new SamlAuthnClient(metadata, peerEntityId, sharedData, timeout);
-  }
-
-  /**
-   * Creates an instance of the authentication client library with a default timeout value.
-   *
-   * @param metadata Metadata to use when encoding and decoding messages.
-   * @param peerEntityId The entity ID of the peer.
-   * @param sharedData A shared-data object to supply signing credential, etc.
-   * @return An instance that uses the given parameters.
-   */
-  @Nonnull
-  public static SamlAuthnClient make(Metadata metadata, String peerEntityId,
-      SamlSharedData sharedData) {
-    return make(metadata, peerEntityId, sharedData, DEFAULT_TIMEOUT);
+    return new SamlAuthnClient(metadata, peerEntityId, sharedData, timeout, metadataUri);
   }
 
   /**
@@ -608,4 +599,12 @@ public final class SamlAuthnClient {
       return builder.buildURL();
     }
   }
+
+  private void readObject(ObjectInputStream is)
+      throws ClassNotFoundException, IOException {
+    is.defaultReadObject();
+    this.metadata = Metadata.getInstance(metadataUri);
+    this.sharedData = SamlSharedData.getProductionInstance(SamlSharedData.Role.SERVICE_PROVIDER);
+  }
+
 }

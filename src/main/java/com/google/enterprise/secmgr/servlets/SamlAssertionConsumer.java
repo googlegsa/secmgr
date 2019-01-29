@@ -17,6 +17,7 @@ package com.google.enterprise.secmgr.servlets;
 import com.google.common.collect.ImmutableSet;
 import com.google.enterprise.logmanager.LogClient;
 import com.google.enterprise.secmgr.authncontroller.AuthnSession;
+import com.google.enterprise.secmgr.authncontroller.AuthnSessionManager;
 import com.google.enterprise.secmgr.authncontroller.AuthnSessionState;
 import com.google.enterprise.secmgr.authncontroller.CredentialsGathererElement;
 import com.google.enterprise.secmgr.authncontroller.ExportedState;
@@ -62,12 +63,14 @@ public class SamlAssertionConsumer extends SamlIdpServlet
   private static final Logger logger = Logger.getLogger(SamlAssertionConsumer.class.getName());
   private static final LogClient gsaLogger = new LogClient(
       "Security Manager", SecurityManagerUtil.getLogManagerServer());
+  private final AuthnSessionManager authnSessionManager;
 
   private static final DateTimeFormatter ISO8601_FORMAT = ISODateTimeFormat.dateTime();
 
   @Inject
-  private SamlAssertionConsumer() {
+  private SamlAssertionConsumer(AuthnSessionManager authnSessionManager) {
     super(SamlSharedData.getProductionInstance(SamlSharedData.Role.SERVICE_PROVIDER));
+    this.authnSessionManager = authnSessionManager;
   }
 
   @Override
@@ -85,13 +88,13 @@ public class SamlAssertionConsumer extends SamlIdpServlet
   private void handleRequest(HttpServletRequest request, HttpServletResponse response,
       String binding)
       throws IOException {
-    AuthnSession session = AuthnSession.getInstance(request,
-        /*createGsaSmSessionIfNotExist=*/false);
+    AuthnSession session = authnSessionManager.findSession(request);
     if (session == null) {
       failNoSession(request, response);
       return;
     }
     session.updateIncomingCookies(request);
+    restoreSamlContext(session);
     try {
       CredentialsGathererElement element =
           session.getCredentialsGathererElement(SamlCredentialsGatherer.class);

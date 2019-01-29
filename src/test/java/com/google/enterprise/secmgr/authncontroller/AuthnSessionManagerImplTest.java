@@ -14,10 +14,10 @@
 
 package com.google.enterprise.secmgr.authncontroller;
 
-import com.google.enterprise.secmgr.common.SecurityManagerUtil;
 import com.google.enterprise.secmgr.config.ConfigSingleton;
 import com.google.enterprise.secmgr.testing.SecurityManagerTestCase;
 import java.io.IOException;
+import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.joda.time.DateTimeUtils;
 
 /**
@@ -25,9 +25,12 @@ import org.joda.time.DateTimeUtils;
  */
 public final class AuthnSessionManagerImplTest extends SecurityManagerTestCase {
 
-  private static final long ONE_MINUTE = 60 * 1000;
+  private static final long ONE_SEC = 1 * 1000;
+  private static final long THREE_SEC = 1 * ONE_SEC;
+  private static final long FIVE_SEC = 5 * ONE_SEC;
 
-  private static final long[] OFFSETS = new long[] { -ONE_MINUTE, -10, -1, 1, 10, ONE_MINUTE };
+  private static final long[] OFFSETS = new long[] { -FIVE_SEC, -THREE_SEC, -ONE_SEC, ONE_SEC,
+      THREE_SEC, FIVE_SEC + ONE_SEC};
 
   private final AuthnSessionManagerImpl manager;
 
@@ -55,21 +58,20 @@ public final class AuthnSessionManagerImplTest extends SecurityManagerTestCase {
 
   public void testRegistration()
       throws IOException {
-    // newInstance will add itself to the sessionmanager
     AuthnSession session = AuthnSession.newInstance();
+    manager.saveSession(session);
     String sessionId = session.getSessionId();
     tryGetSession(true, sessionId, session);
   }
 
   private void tryGetSession(boolean isValid, String sessionId, AuthnSession session) {
     if (isValid) {
-      AuthnSession result = manager.getSession(sessionId);
+      AuthnSession result = manager.findSessionById(sessionId);
       assertNotNull(result);
       assertEquals(sessionId, result.getSessionId());
-      assertEquals(session, result);
+      assertTrue(EqualsBuilder.reflectionEquals(session, result, true));
     } else {
-      assertNull(manager.getSession(sessionId));
-      assertNull(manager.getSessionRef(session));
+      assertNull(manager.findSessionById(sessionId));
     }
   }
 
@@ -79,20 +81,12 @@ public final class AuthnSessionManagerImplTest extends SecurityManagerTestCase {
     assertEquals(864000000, testManager.getSessionIdleMillis());
   }
 
-  public void testBasicExpiration()
-      throws IOException {
-    for (long offset : OFFSETS) {
-      reset();
-      tryBasicExpiration(offset, SecurityManagerUtil.getGsaSessionIdleMillis());
-    }
-  }
-
   public void testBasicExpirationChangeIdle()
       throws IOException {
     for (long offset : OFFSETS) {
       reset();
-      manager.setSessionIdleMillis(ONE_MINUTE);
-      tryBasicExpiration(offset, ONE_MINUTE);
+      manager.setSessionIdleMillis(FIVE_SEC);
+      tryBasicExpiration(offset, FIVE_SEC);
     }
   }
 
@@ -100,36 +94,13 @@ public final class AuthnSessionManagerImplTest extends SecurityManagerTestCase {
       throws IOException {
     AuthnSession session = AuthnSession.newInstance();
     String sessionId = session.getSessionId();
-    manager.registerSession(session);
-    DateTimeUtils.setCurrentMillisOffset(sessionIdleTime + offset);
-    tryGetSession(offset <= 0, sessionId, session);
-  }
-
-  public void testCompoundExpiration()
-      throws IOException {
-    for (long offset : OFFSETS) {
-      reset();
-      tryCompoundExpiration(offset, SecurityManagerUtil.getGsaSessionIdleMillis());
+    manager.saveSession(session);
+    try {
+      long sleepTime = sessionIdleTime + offset;
+      Thread.sleep (sleepTime);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
     }
-  }
-
-  public void testCompoundExpirationChangeIdle()
-      throws IOException {
-    for (long offset : OFFSETS) {
-      reset();
-      manager.setSessionIdleMillis(ONE_MINUTE);
-      tryCompoundExpiration(offset, ONE_MINUTE);
-    }
-  }
-
-  private void tryCompoundExpiration(long offset, long sessionIdleTime)
-      throws IOException {
-    AuthnSession session = AuthnSession.newInstance();
-    String sessionId = session.getSessionId();
-    manager.registerSession(session);
-    DateTimeUtils.setCurrentMillisOffset(sessionIdleTime - 10);
-    tryGetSession(true, sessionId, session);
-    DateTimeUtils.setCurrentMillisOffset(sessionIdleTime - 10 + sessionIdleTime + offset);
     tryGetSession(offset <= 0, sessionId, session);
   }
 }

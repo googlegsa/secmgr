@@ -15,6 +15,7 @@
  */
 package com.google.enterprise.secmgr.authzcontroller;
 
+import com.google.enterprise.secmgr.authncontroller.AuthnSession;
 import com.google.enterprise.secmgr.common.Resource;
 import com.google.enterprise.secmgr.modules.AuthzResult;
 
@@ -32,11 +33,11 @@ public interface Authorizer {
    * Runs this authorizer on some resources.
    *
    * @param resources Some resources to be authorized.
-   * @param sessionId A sessionId to use for authorization.
+   * @param sessionId A session to use for authorization.
    * @param enableFastAuthz If true, only use "fast" authorization mechanisms.
    * @return The authorization results for the given resources.
    */
   @Nonnull
-  public AuthzResult apply(Collection<Resource> resources, String sessionId,
+  AuthzResult apply(Collection<Resource> resources, String sessionId,
       boolean enableFastAuthz);
 }

@@ -49,7 +49,7 @@ public abstract class TearDownTestCase extends TestCase {
   }
 
   @Override
-  protected final void tearDown() {
+  protected void tearDown() {
     stack.runTearDown();
   }
 

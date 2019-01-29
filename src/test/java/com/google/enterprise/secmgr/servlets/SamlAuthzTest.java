@@ -88,12 +88,14 @@ public class SamlAuthzTest extends SecurityManagerTestCase {
 
     AuthnSession session = integration.makeSession();
     sessionId = session.getSessionId();
+    integration.setSessionId(sessionId);
     decorator = SessionUtil.getLogDecorator(sessionId);
     AuthnMechanism mech = session.getMechanisms().get(0);
     session.addVerification(mech.getAuthority(),
         Verification.verified(
             Verification.NEVER_EXPIRES,
             AuthnPrincipal.make(USERNAME, session.getView(mech).getCredentialGroup().getName())));
+    sessionManager.saveSession(session);
   }
 
   private final class LocalTestRunner implements AuthzServletTest.TestRunner {
@@ -109,7 +111,7 @@ public class SamlAuthzTest extends SecurityManagerTestCase {
       integration.getHttpTransport().registerServlet(
           MockIntegration.getSamlAuthzEndpoint(integration.getGsaHost()),
           SamlAuthz.getTestingInstance(sharedData,
-              AuthorizerImpl.getTestingInstance(controller, sessionManager)));
+              AuthorizerImpl.getTestingInstance(controller, sessionManager), sessionManager));
     }
 
     @Override

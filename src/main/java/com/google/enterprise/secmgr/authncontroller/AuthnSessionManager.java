@@ -15,18 +15,19 @@
 package com.google.enterprise.secmgr.authncontroller;
 
 import com.google.enterprise.secmgr.identity.AuthnPrincipal;
+import java.io.IOException;
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * The authentication-session manager.  Tracks sessions and when they were last
  * used.  May eventually support garbage collection and session expiration.
  */
 public interface AuthnSessionManager {
+
   /**
-   * Register an authentication session.
-   *
-   * @param session The session to register.
+   * Creates new session and attach it to request.
    */
-  public void registerSession(AuthnSession session);
+  AuthnSession createAttachedSession(HttpServletRequest request) throws IOException;
 
   /**
    * Get a previously-registered session.
@@ -34,26 +35,15 @@ public interface AuthnSessionManager {
    * @param sessionId The ID of the saved session.
    * @return The saved session, or null if there's none.
    */
-  public AuthnSession getSession(String sessionId);
+  AuthnSession findSessionById(String sessionId);
 
-  /**
-   * Associates a user to a session id.
-   * @param user The user
-   * @param sessionId The ID of the session.
-   */
-  public void addUserSession(AuthnPrincipal user, String sessionId);
+  AuthnSession findSession(HttpServletRequest request);
 
-  /**
-   * Gets the session for the user.
-   * @param user The user
-   * @return The session for the user. Returns null if there is no existing session.
-   */
-  public AuthnSession getUserSession(AuthnPrincipal user);
+  AuthnSession createSession() throws IOException;
 
-  /**
-   * Set the amount of time a session is allowed to be idle before it's expired.
-   *
-   * @param sessionIdleMillis The idle time in milliseconds.
-   */
-  public void setSessionIdleMillis(long sessionIdleMillis);
+  void saveSession(AuthnSession authnSession);
+
+  void updateSessionTTL(AuthnSession authnSession);
+
+  void setSessionIdleMillis(long sessionIdleMillis);
 }

@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.net.URI;
+import java.net.URISyntaxException;
 import org.joda.time.DateTime;
 import org.opensaml.DefaultBootstrap;
 import org.opensaml.saml2.core.Conditions;
@@ -122,8 +124,14 @@ public class ResponseParserTest extends SecurityManagerTestCase {
     SamlSharedData sharedData = SamlSharedData.make(
         "http://google.com/enterprise/gsa/T3-FCYP38T39YSGY",
         SamlSharedData.Role.SERVICE_PROVIDER, null);
-    SamlAuthnClient client = SamlAuthnClient.make(Metadata.getInstanceForTest(
-        "http://foobar.org/saml-idp-2"), response.getIssuer().getValue(), sharedData);
+    SamlAuthnClient client = null;
+    try {
+      client = SamlAuthnClient.make(Metadata.getInstanceForTest(
+          "http://foobar.org/saml-idp-2"), response.getIssuer().getValue(), sharedData,
+          SamlAuthnClient.DEFAULT_TIMEOUT, new URI("http://foobar.org/saml-idp-2"));
+    } catch (URISyntaxException e) {
+      throw new RuntimeException(e);
+    }
     setClientRequestId(client, "_f23e7216b92a743de52e086a962b90ae");
     return client;
   }

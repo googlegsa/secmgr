@@ -131,12 +131,12 @@ public class MockSamlIdp extends SamlIdpServlet
   }
 
   public void setConfig(SecurityManagerConfig config) {
-    session = AuthnSession.getInstance(config);
+    session = AuthnSession.newInstance(config);
   }
 
   public void setCredentialGroups(List<CredentialGroup> credentialGroups) {
     session = (credentialGroups != null)
-        ? AuthnSession.getInstance(SecurityManagerConfig.make(credentialGroups))
+        ? AuthnSession.newInstance(SecurityManagerConfig.make(credentialGroups))
         : null;
   }
 
@@ -184,7 +184,7 @@ public class MockSamlIdp extends SamlIdpServlet
 
     // Select entity for response.
     initializePeerEntity(context, AssertionConsumerService.DEFAULT_ELEMENT_NAME,
-        getResponseBinding(context));
+        getResponseBinding(context), getSharedData());
 
     Response samlResponse = supplier.apply(context).generate(
         (session != null) ? session.getSnapshot() : null);

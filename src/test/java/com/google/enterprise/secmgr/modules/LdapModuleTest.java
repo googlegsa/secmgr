@@ -99,7 +99,7 @@ public class LdapModuleTest extends SecurityManagerTestCase {
     }
 
     void resetSession() {
-      session = AuthnSession.getInstance(config);
+      session = AuthnSession.newInstance(config);
     }
 
     void addCredentials(String username, String password) {

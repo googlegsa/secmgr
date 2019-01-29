@@ -108,7 +108,8 @@ public class MockServiceProvider extends SamlServlet implements GettableHttpServ
 
   private void ifUnknown(HttpServletRequest req, HttpServletResponse resp)
       throws IOException {
-    SAMLMessageContext<SAMLObject, AuthnRequest, NameID> context = makeSamlMessageContext(req);
+    SAMLMessageContext<SAMLObject, AuthnRequest, NameID> context
+        = makeSamlMessageContext(req, getSharedData());
     initializePeerEntity(context, Metadata.getSmEntityId(),
         SingleSignOnService.DEFAULT_ELEMENT_NAME,
         SAML2_REDIRECT_BINDING_URI);

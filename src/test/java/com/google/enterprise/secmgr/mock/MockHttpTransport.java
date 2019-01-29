@@ -25,6 +25,7 @@ import com.google.enterprise.secmgr.common.ServletBase;
 import com.google.enterprise.secmgr.testing.ExchangeLog;
 import com.google.enterprise.secmgr.testing.ExchangeLog.Builder;
 import com.google.enterprise.secmgr.testing.ServletTestUtil;
+import com.google.enterprise.sessionmanager.SessionFilter;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -49,6 +51,8 @@ import org.springframework.mock.web.MockServletContext;
  * A trivial HttpTransport that just maps request URLs to registered servlets.
  */
 public final class MockHttpTransport implements HttpTransport {
+
+  private final SessionFilter sessionFilter;
 
   /**
    * A set of identifiers that can be used to identity the HTTP messages
@@ -78,7 +82,8 @@ public final class MockHttpTransport implements HttpTransport {
   private final Multimap<Class<? extends HttpServlet>, RequestAction> requestActions;
   private final Multimap<Class<? extends HttpServlet>, ResponseAction> responseActions;
 
-  public MockHttpTransport() {
+  @Inject
+  public MockHttpTransport(SessionFilter sessionFilter) {
     getMap = Maps.newHashMap();
     postMap = Maps.newHashMap();
     contextMap = Maps.newHashMap();
@@ -87,6 +92,7 @@ public final class MockHttpTransport implements HttpTransport {
     exchangeLogBuilder = new Builder();
     requestActions = ArrayListMultimap.create();
     responseActions = ArrayListMultimap.create();
+    this.sessionFilter = sessionFilter;
   }
 
   public void registerContextUrl(String contextUrl) {
@@ -250,6 +256,7 @@ public final class MockHttpTransport implements HttpTransport {
     } else {
       throw new ServletException("Unsupported request method: " + method);
     }
+    sessionFilter.afterServlet(request);
     exchangeLogBuilder.pop(exchangeLog);
   }
 

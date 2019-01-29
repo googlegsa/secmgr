@@ -33,6 +33,7 @@ import com.google.enterprise.secmgr.identity.GroupMemberships;
 import com.google.enterprise.secmgr.identity.Verification;
 import com.google.enterprise.secmgr.identity.VerificationStatus;
 
+import java.io.Serializable;
 import java.net.URL;
 
 import javax.annotation.Nonnegative;
@@ -48,7 +49,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 @Immutable
 @ParametersAreNonnullByDefault
-public abstract class SessionView {
+public abstract class SessionView implements Serializable {
 
   @Nonnull protected final SessionSnapshot snapshot;
   @GuardedBy("this") @Nullable protected AuthnSessionState.Summary summary;

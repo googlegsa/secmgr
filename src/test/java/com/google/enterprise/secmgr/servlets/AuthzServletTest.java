@@ -79,6 +79,7 @@ public class AuthzServletTest extends SecurityManagerTestCase {
             Verification.NEVER_EXPIRES,
             AuthnPrincipal.make(USERNAME, 
                 session.getView(mech).getCredentialGroup().getName())));
+    sessionManager.saveSession(session);
   }
 
   interface TestRunner {
@@ -93,7 +94,7 @@ public class AuthzServletTest extends SecurityManagerTestCase {
     public void initServlet(AuthorizationController controller)
         throws ServletException {
       AuthzServlet authzServlet = AuthzServlet.getTestingInstance(
-          AuthorizerImpl.getTestingInstance(controller, sessionManager));
+          AuthorizerImpl.getTestingInstance(controller, sessionManager), sessionManager);
       integration.getHttpTransport().registerServlet(
           MockIntegration.getAuthzServletUrl(integration.getGsaHost()), authzServlet);
     }

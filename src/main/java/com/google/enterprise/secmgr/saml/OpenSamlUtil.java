@@ -27,6 +27,7 @@ import com.google.enterprise.secmgr.config.ConfigSingleton;
 import com.google.enterprise.secmgr.saml.OpenSamlUtil.DeferredSecurityPolicyRule.GenerationException;
 import com.google.enterprise.secmgr.saml.OpenSamlUtil.DeferredSecurityPolicyRule.Parameters;
 
+import com.google.enterprise.sessionmanager.ArtifactStorageService;
 import org.joda.time.DateTime;
 import org.opensaml.Configuration;
 import org.opensaml.DefaultBootstrap;
@@ -1628,6 +1629,14 @@ public final class OpenSamlUtil {
     return Configuration.getUnmarshallerFactory().getUnmarshaller(element).unmarshall(element);
   }
 
+
+  private static ArtifactStorageService artifactStorageService;
+
+
+  public static void setArtifactStorageService(ArtifactStorageService artifactStorageService) {
+    OpenSamlUtil.artifactStorageService = artifactStorageService;
+  }
+
   /**
    * Makes a new artifact map.
    *
@@ -1638,7 +1647,7 @@ public final class OpenSamlUtil {
   public static SAMLArtifactMap makeArtifactMap(@Nonnegative long artifactLifetime) {
     Preconditions.checkArgument(artifactLifetime >= 0);
     return new BasicSAMLArtifactMap(
-        new MapBasedStorageService<String, SAMLArtifactMapEntry>(),
+        artifactStorageService,
         artifactLifetime);
   }
 }

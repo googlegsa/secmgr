@@ -86,7 +86,7 @@ public class SamlArtifactResolve extends SamlServlet implements PostableHttpServ
 
     // Establish the SAML message context.
     SAMLMessageContext<ArtifactResolve, ArtifactResponse, NameID> context
-        = makeSamlMessageContext(req);
+        = makeSamlMessageContext(req, getSharedData());
 
     Status status = null;
     SAMLObject responseObject = null;
@@ -108,23 +108,23 @@ public class SamlArtifactResolve extends SamlServlet implements PostableHttpServ
 
     // Select entity for response.
     initializePeerEntity(context, Endpoint.DEFAULT_ELEMENT_NAME,
-        SAMLConstants.SAML2_SOAP11_BINDING_URI);
+        SAMLConstants.SAML2_SOAP11_BINDING_URI, getSharedData());
 
     // Any errors above will have set status, but if no errors, look up the
     // artifact and add any resulting object to response.
     if (status == null) {
       SAMLArtifactMap artifactMap = getArtifactMap();
       String encodedArtifact = artifactResolve.getArtifact().getArtifact();
-      if (!artifactMap.contains(encodedArtifact)) {
+      SAMLArtifactMapEntry samlArtifactMapEntry = artifactMap.get(encodedArtifact);
+      if (samlArtifactMapEntry == null) {
         logger.warning(responseMessage("Unknown artifact", encodedArtifact, decorator));
         status = makeFailureStatus("Artifact unacceptable");
       } else {
-        SAMLArtifactMapEntry entry = artifactMap.get(encodedArtifact);
-        String statusMessage = checkEntry(entry, context.getInboundMessageIssuer());
+        String statusMessage = checkEntry(samlArtifactMapEntry, context.getInboundMessageIssuer());
         if (statusMessage == null) {
           logger.info(responseMessage("Artifact resolved", encodedArtifact, decorator));
           status = makeSuccessfulStatus();
-          responseObject = entry.getSamlMessage();
+          responseObject = samlArtifactMapEntry.getSamlMessage();
         } else {
           logger.warning(responseMessage(statusMessage, encodedArtifact, decorator));
           status = makeFailureStatus("Artifact unacceptable");

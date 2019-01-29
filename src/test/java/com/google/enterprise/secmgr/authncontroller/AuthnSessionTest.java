@@ -72,7 +72,7 @@ public class AuthnSessionTest extends SecurityManagerTestCase {
                 CredentialGroup.builder("group2", "group2 display", true, true, false)
                 .addMechanism(AuthnMechSaml.make("mech3", ENTITY_ID_3))
                 .build()));
-    session = AuthnSession.getInstance(config);
+    session = AuthnSession.newInstance(config);
   }
 
   /**
@@ -314,7 +314,7 @@ public class AuthnSessionTest extends SecurityManagerTestCase {
   }
 
   private void newIdleSession() {
-    session = AuthnSession.getInstance(config);
+    session = AuthnSession.newInstance(config);
   }
 
   private void allowIdleTransition() {
@@ -413,7 +413,7 @@ public class AuthnSessionTest extends SecurityManagerTestCase {
     AuthnMechanism mech4 = AuthnMechSaml.make("mech4", "http://example.com/saml/");
     List<AuthnMechanism> mechs = ImmutableList.of(mech1, mech2, mech3, mech4);
     AuthnSession session
-        = AuthnSession.getInstance(
+        = AuthnSession.newInstance(
             makeConfig(
                 ImmutableList.of(
                     CredentialGroup.builder("cg1", "Credential Group #1", true, false, false)
@@ -429,10 +429,10 @@ public class AuthnSessionTest extends SecurityManagerTestCase {
             "cg1"),
             CredPassword.make("biden"));
     Verification verification2
-        = Verification.verified(Verification.NEVER_EXPIRES, AuthnPrincipal.make("joe", 
+        = Verification.verified(Verification.NEVER_EXPIRES, AuthnPrincipal.make("joe",
             "cg1"));
     Verification verification3
-        = Verification.verified(Verification.NEVER_EXPIRES, AuthnPrincipal.make("jim", 
+        = Verification.verified(Verification.NEVER_EXPIRES, AuthnPrincipal.make("jim",
             "cg1"));
     Set<Verification> verifications0 = ImmutableSet.of();
     Set<Verification> verifications1 = ImmutableSet.of(verification1);

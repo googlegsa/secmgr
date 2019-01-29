@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import com.google.enterprise.secmgr.authncontroller.AuthnSession;
+import com.google.enterprise.secmgr.authncontroller.AuthnSessionManager;
 import com.google.enterprise.secmgr.authncontroller.SessionView;
 import com.google.enterprise.secmgr.common.AuthzStatus;
 import com.google.enterprise.secmgr.common.Resource;
@@ -51,6 +52,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.opensaml.common.xml.SAMLConstants;
 
 /**
@@ -76,6 +79,7 @@ public class SamlModuleTest extends SecurityManagerTestCase {
   private final SecurityManagerConfig config;
   private final FlexAuthzRule rule1;
   private final FlexAuthzRule rule2;
+  private final AuthnSessionManager sessionManager;
   private AuthnSession session;
 
   public SamlModuleTest() {
@@ -100,12 +104,13 @@ public class SamlModuleTest extends SecurityManagerTestCase {
             ParamName.SAML_ENTITY_ID, ENTITY_ID_2,
             ParamName.SAML_USE_BATCHED_REQUESTS, Boolean.TRUE.toString()),
         MECH2_NAME, FlexAuthzRule.NO_TIME_LIMIT);
+    sessionManager = ConfigSingleton.getInstance(AuthnSessionManager.class);
   }
 
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    session = AuthnSession.getInstance(config);
+    session = AuthnSession.newInstance(config);
   }
 
   public void testAuthzWithPasswordSuccess() throws Exception {
@@ -130,7 +135,7 @@ public class SamlModuleTest extends SecurityManagerTestCase {
         authorizationMap);
 
     MockSamlPdp samlPdp = new MockSamlPdp(SamlSharedData.make(ENTITY_ID_1,
-        SamlSharedData.Role.AUTHZ_SERVER, null), credMap, method);
+        SamlSharedData.Role.AUTHZ_SERVER, null), credMap, method, ConfigSingleton.getInstance(AuthnSessionManager.class));
     setSamlPdp(samlPdp, ENTITY_ID_1);
 
     AuthzResult responses = tryResources(mech1, rule1, URL1, URL2, URL3);
@@ -164,7 +169,7 @@ public class SamlModuleTest extends SecurityManagerTestCase {
         authorizationMap);
 
     MockSamlPdp samlPdp = new MockSamlPdp(SamlSharedData.make(ENTITY_ID_2,
-        SamlSharedData.Role.AUTHZ_SERVER, null), credMap, method);
+        SamlSharedData.Role.AUTHZ_SERVER, null), credMap, method, ConfigSingleton.getInstance(AuthnSessionManager.class));
     setSamlPdp(samlPdp, ENTITY_ID_2);
 
     AuthzResult responses = tryResources(mech2, rule2, URL1, URL2, URL3);
@@ -201,7 +206,7 @@ public class SamlModuleTest extends SecurityManagerTestCase {
         authorizationMap);
 
     MockSamlPdp samlPdp = new MockSamlPdp(SamlSharedData.make(ENTITY_ID_1,
-        SamlSharedData.Role.AUTHZ_SERVER, null), credMap, method);
+        SamlSharedData.Role.AUTHZ_SERVER, null), credMap, method, ConfigSingleton.getInstance(AuthnSessionManager.class));
     setSamlPdp(samlPdp, ENTITY_ID_1);
 
     AuthzResult responses = tryResources(mech1, rule1, URL1, URL2);
@@ -233,7 +238,7 @@ public class SamlModuleTest extends SecurityManagerTestCase {
         authorizationMap);
 
     MockSamlPdp samlPdp = new MockSamlPdp(SamlSharedData.make(ENTITY_ID_2,
-        SamlSharedData.Role.AUTHZ_SERVER, null), credMap, method);
+        SamlSharedData.Role.AUTHZ_SERVER, null), credMap, method, ConfigSingleton.getInstance(AuthnSessionManager.class));
     setSamlPdp(samlPdp, ENTITY_ID_2);
 
     AuthzResult responses = tryResources(mech2, rule2, URL1, URL2);
@@ -269,7 +274,7 @@ public class SamlModuleTest extends SecurityManagerTestCase {
     AuthorizeWithCredential method = new AuthorizeByAcl(aclMap);
 
     MockSamlPdp samlPdp = new MockSamlPdp(SamlSharedData.make(ENTITY_ID_1,
-        SamlSharedData.Role.AUTHZ_SERVER, null), credMap, method);
+        SamlSharedData.Role.AUTHZ_SERVER, null), credMap, method, ConfigSingleton.getInstance(AuthnSessionManager.class));
     setSamlPdp(samlPdp, ENTITY_ID_1);
 
     AuthzResult responses = tryResources(mech1, rule1, URL1, URL2, URL3);
@@ -307,7 +312,7 @@ public class SamlModuleTest extends SecurityManagerTestCase {
     AuthorizeWithCredential method = new AuthorizeByAcl(aclMap);
 
     MockSamlPdp samlPdp = new MockSamlPdp(SamlSharedData.make(ENTITY_ID_2,
-        SamlSharedData.Role.AUTHZ_SERVER, null), credMap, method);
+        SamlSharedData.Role.AUTHZ_SERVER, null), credMap, method, ConfigSingleton.getInstance(AuthnSessionManager.class));
     setSamlPdp(samlPdp, ENTITY_ID_2);
 
     AuthzResult responses = tryResources(mech2, rule2, URL1, URL2, URL3);
@@ -331,25 +336,32 @@ public class SamlModuleTest extends SecurityManagerTestCase {
             AuthnPrincipal.make(cred.getName(), cred.getNamespace(), cred.getDomain()),
             CredPassword.make(cred.getPassword()),
             GroupMemberships.make(groups)));
+    sessionManager.saveSession(session);
     return cred;
   }
 
   private void setSamlPdp(MockSamlPdp samlPdp, String entityId) throws Exception {
     Metadata metadata = Metadata.getInstanceForTest();
-    MockHttpTransport transport = new MockHttpTransport();
+    MockHttpTransport transport = ConfigSingleton.getInstance(MockHttpTransport.class);
     transport.registerServlet(
         metadata.getEntity(entityId).getPDPDescriptor(SAMLConstants.SAML20P_NS)
         .getAuthzServices().get(0).getLocation(), samlPdp);
     HttpClientUtil.setHttpClient(new MockHttpClient(transport));
   }
 
+  private static final Logger logger = Logger.getLogger(SamlModuleTest.class.getName());
   private AuthzResult tryResources(AuthnMechanism mech, FlexAuthzRule rule, String... resourceUrls)
       throws IOException {
     SessionView view = session.getView(mech);
-    AuthzResult responses = module.authorize(
-        Resource.urlsToResourcesNoAcls(ImmutableList.copyOf(resourceUrls)), view, rule);
-    assertNotNull(responses);
-    assertEquals(resourceUrls.length, responses.size());
-    return responses;
+    try {
+      AuthzResult responses = module.authorize(
+          Resource.urlsToResourcesNoAcls(ImmutableList.copyOf(resourceUrls)), view, rule);
+      assertNotNull(responses);
+      assertEquals(resourceUrls.length, responses.size());
+      return responses;
+    } catch (IOException e) {
+      logger.log(Level.SEVERE, e.getMessage(), e);
+      throw e;
+    }
   }
 }

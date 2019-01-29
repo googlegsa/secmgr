@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.net.InetAddresses;
 import com.google.enterprise.secmgr.authncontroller.AuthnSession;
 import com.google.enterprise.secmgr.authncontroller.AuthnSession.AuthnState;
+import com.google.enterprise.secmgr.authncontroller.AuthnSessionManager;
 import com.google.enterprise.secmgr.authncontroller.SessionSnapshot;
 import com.google.enterprise.secmgr.common.HttpUtil;
 import com.google.enterprise.secmgr.common.PostableHttpServlet;
@@ -45,11 +46,13 @@ import javax.servlet.http.HttpServletResponse;
 public class DocumentFetcher extends ServletBase implements PostableHttpServlet {
   private static final Logger logger = Logger.getLogger(DocumentFetcher.class.getName());
   private final DocumentFetcherController controller;
+  private final AuthnSessionManager sessionManager;
 
   @VisibleForTesting
   @Inject
-  DocumentFetcher(DocumentFetcherController controller) {
+  DocumentFetcher(DocumentFetcherController controller, AuthnSessionManager sessionManager) {
     this.controller = controller;
+    this.sessionManager = sessionManager;
   }
   
   @VisibleForTesting
@@ -69,11 +72,10 @@ public class DocumentFetcher extends ServletBase implements PostableHttpServlet 
   
   @VisibleForTesting
   AuthnSession getSession(HttpServletRequest req) throws IOException {
-    AuthnSession session = AuthnSession.getInstance(req,
-        /*createGsaSmSessionIfNotExist=*/false);
+    AuthnSession session = sessionManager.findSession(req);
     
     if (session == null) {
-      session = AuthnSession.newInstance();
+      session = sessionManager.createSession();
       logger.info(SessionUtil.logMessage(
           session.getSessionId(), "Looks like this request was issued during a public search."));
     }

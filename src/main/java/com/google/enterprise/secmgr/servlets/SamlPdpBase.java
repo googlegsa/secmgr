@@ -19,6 +19,7 @@ import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getXmlSignatureRule
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.initializeSecurityPolicy;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAction;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAssertion;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAuthnFailureStatus;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAuthzDecisionStatement;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeResponse;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeSubject;
@@ -31,6 +32,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.enterprise.secmgr.authncontroller.AuthnSession;
+import com.google.enterprise.secmgr.authncontroller.AuthnSessionManager;
 import com.google.enterprise.secmgr.authzcontroller.Authorizer;
 import com.google.enterprise.secmgr.common.AuthzStatus;
 import com.google.enterprise.secmgr.common.Decorator;
@@ -57,6 +60,7 @@ import org.opensaml.saml2.core.AuthzDecisionStatement;
 import org.opensaml.saml2.core.DecisionTypeEnumeration;
 import org.opensaml.saml2.core.NameID;
 import org.opensaml.saml2.core.Response;
+import org.opensaml.saml2.core.Status;
 import org.opensaml.ws.message.encoder.MessageEncodingException;
 import org.opensaml.ws.transport.http.HTTPInTransport;
 import org.opensaml.ws.transport.http.HTTPOutTransport;
@@ -104,9 +108,11 @@ public final class SamlPdpBase {
    * @return The new PDP instance.
    */
   @Nonnull
-  public static SamlPdpBase make(SamlSharedData sharedData, Authorizer authorizer) {
+  public static SamlPdpBase make(SamlSharedData sharedData, Authorizer authorizer,
+      AuthnSessionManager sessionManager) {
     Preconditions.checkNotNull(sharedData);
     Preconditions.checkNotNull(authorizer);
+    Preconditions.checkNotNull(sessionManager);
     return new SamlPdpBase(sharedData, authorizer);
   }
 
@@ -127,6 +133,7 @@ public final class SamlPdpBase {
       long startDecoding = System.currentTimeMillis();
       DecodedRequest decodedRequest = decodeAuthzRequest(request);
       sessionId = decodedRequest.getSessionId();
+
       long startAuthorizing = System.currentTimeMillis();
       DecodedResponse decodedResponse = authorize(decodedRequest, decorator);
       long startEncoding = System.currentTimeMillis();
@@ -416,8 +423,8 @@ public final class SamlPdpBase {
     runEncoder(new HTTPSOAP11Encoder(), context, decorator);
   }
 
-  private Response makeAuthzResponse(String sessionId, String inResponseTo, DateTime now,
-      Iterable<ResponseRecord> records) {
+  private Response makeAuthzResponse(/*Status status, */String sessionId, String inResponseTo,
+      DateTime now, Iterable<ResponseRecord> records) {
     // Note: We disregard the Action in the query and always return an
     // assertion about Action.HTTP_GET_ACTION. It's the only thing we know how
     // to test for. It might be argued that if the querier asked for anything

@@ -15,6 +15,7 @@
 package com.google.enterprise.secmgr.servlets;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.enterprise.secmgr.authncontroller.AuthnSessionManager;
 import com.google.enterprise.secmgr.authzcontroller.Authorizer;
 import com.google.enterprise.secmgr.common.PostableHttpServlet;
 import com.google.enterprise.secmgr.saml.SamlSharedData;
@@ -34,20 +35,22 @@ import javax.servlet.http.HttpServletResponse;
 public class SamlAuthz extends SamlServlet implements PostableHttpServlet {
   private final SamlPdpBase pdp;
 
-  private SamlAuthz(SamlSharedData sharedData, Authorizer authorizer) {
+  private SamlAuthz(SamlSharedData sharedData, Authorizer authorizer,
+      AuthnSessionManager sessionManager) {
     super(sharedData);
-    pdp = SamlPdpBase.make(sharedData, authorizer);
+    pdp = SamlPdpBase.make(sharedData, authorizer, sessionManager);
   }
 
   @SuppressWarnings("unused")
   @Inject
-  private SamlAuthz(Authorizer authorizer) {
-    this(SamlSharedData.getProductionInstance(SamlSharedData.Role.AUTHZ_SERVER), authorizer);
+  private SamlAuthz(Authorizer authorizer, AuthnSessionManager sessionManager) {
+    this(SamlSharedData.getProductionInstance(SamlSharedData.Role.AUTHZ_SERVER), authorizer, sessionManager);
   }
 
   @VisibleForTesting
-  static SamlAuthz getTestingInstance(SamlSharedData sharedData, Authorizer authorizer) {
-    return new SamlAuthz(sharedData, authorizer);
+  static SamlAuthz getTestingInstance(SamlSharedData sharedData, Authorizer authorizer,
+      AuthnSessionManager sessionManager) {
+    return new SamlAuthz(sharedData, authorizer, sessionManager);
   }
 
   @Override

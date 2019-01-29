@@ -16,6 +16,7 @@ package com.google.enterprise.secmgr.http;
 
 import com.google.common.base.Ticker;
 import com.google.enterprise.secmgr.config.ConfigParams;
+import com.google.enterprise.secmgr.config.ConfigSingleton;
 import com.google.enterprise.secmgr.config.ParamName;
 import com.google.enterprise.secmgr.http.SlowHostTracker.UnresponsiveHostException;
 import com.google.enterprise.secmgr.mock.MockHttpClient;
@@ -50,7 +51,7 @@ public class SlowHostTrackerTest extends SecurityManagerTestCase {
     ticker = new TestTicker();
     tracker = SlowHostTracker.getInstanceForTesting(ticker);
 
-    MockHttpTransport transport = new MockHttpTransport();
+    MockHttpTransport transport = ConfigSingleton.getInstance(MockHttpTransport.class);
     transport.registerServlet(GOOD_URL, new MockHttpServer());
     transport.registerServlet(SLOW_URL, new MockSlowServer());
     HttpClientUtil.setHttpClient(new MockHttpClient(transport));

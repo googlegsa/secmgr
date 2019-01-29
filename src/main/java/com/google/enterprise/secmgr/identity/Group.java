@@ -17,6 +17,7 @@ package com.google.enterprise.secmgr.identity;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 import javax.annotation.Nonnull;
@@ -26,7 +27,7 @@ import javax.annotation.Nullable;
  * Class that contains the info related to a group.
  *
  */
-public class Group {
+public class Group implements Serializable {
   @Nonnull private final String name;
   @Nonnull private final String namespace;
   @Nullable private final String domain;

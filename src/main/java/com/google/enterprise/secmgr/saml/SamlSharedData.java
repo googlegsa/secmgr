@@ -54,7 +54,7 @@ import javax.xml.namespace.QName;
 @ParametersAreNonnullByDefault
 public final class SamlSharedData {
   private static final Logger logger = Logger.getLogger(SamlSharedData.class.getName());
-  public static final int DEFAULT_ARTIFACT_LIFETIME = 10 * 60 * 1000;  // ten minutes
+  public static final int DEFAULT_ARTIFACT_LIFETIME_MS = 10 * 60 * 1000;  // ten minutes
   public static final ImmutableList<String> ALLOWED_BINDINGS
       = ImmutableList.of(
           SAMLConstants.SAML2_ARTIFACT_BINDING_URI,
@@ -101,7 +101,7 @@ public final class SamlSharedData {
       if (productionInstances == null) {
         String entityId = Metadata.getSmEntityId();
         Supplier<Credential> supplier = new ProductionSigningCredentialSupplier();
-        SAMLArtifactMap artifactMap = OpenSamlUtil.makeArtifactMap(DEFAULT_ARTIFACT_LIFETIME);
+        SAMLArtifactMap artifactMap = OpenSamlUtil.makeArtifactMap(DEFAULT_ARTIFACT_LIFETIME_MS);
         ImmutableMap.Builder<Role, SamlSharedData> builder = ImmutableMap.builder();
         for (Role role : Role.values()) {
           builder.put(role, new SamlSharedData(entityId, role, artifactMap, supplier));
@@ -141,7 +141,7 @@ public final class SamlSharedData {
     Preconditions.checkNotNull(localEntityId);
     Preconditions.checkNotNull(role);
     return new SamlSharedData(localEntityId, role,
-        OpenSamlUtil.makeArtifactMap(DEFAULT_ARTIFACT_LIFETIME),
+        OpenSamlUtil.makeArtifactMap(DEFAULT_ARTIFACT_LIFETIME_MS),
         signingCredentialSupplier);
   }
 

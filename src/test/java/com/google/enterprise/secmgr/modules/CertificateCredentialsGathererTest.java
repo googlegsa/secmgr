@@ -85,7 +85,7 @@ public class CertificateCredentialsGathererTest extends SecurityManagerTestCase 
                 CredentialGroup.builder("group2", "group2 display", true, true, false)
                 .addMechanism(otherMechanism)
                 .build()));
-    session = AuthnSession.getInstance(config);
+    session = AuthnSession.newInstance(config);
 
     // Set up test clientAuth credential gatherer.
     testGatherer = ConfigSingleton.getInstance(CertificateCredentialsGatherer.class);

@@ -18,6 +18,7 @@ package com.google.enterprise.secmgr.servlets;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.enterprise.secmgr.authncontroller.AuthnSessionManager;
 import com.google.enterprise.secmgr.authzcontroller.Authorizer;
 import com.google.enterprise.secmgr.common.AuthzMessages;
 import com.google.enterprise.secmgr.common.AuthzMessages.AuthzRequest;
@@ -51,17 +52,19 @@ public class AuthzServlet extends ServletBase implements PostableHttpServlet {
   private static final Logger logger = Logger.getLogger(AuthzServlet.class.getName());
 
   private final Authorizer authorizer;
+  private final AuthnSessionManager sessionManager;
 
   @Inject
-  private AuthzServlet(Authorizer authorizer) {
+  private AuthzServlet(Authorizer authorizer, AuthnSessionManager sessionManager) {
     logger.info("Init authz servlet");
     this.authorizer = authorizer;
+    this.sessionManager = sessionManager;
   }
 
   @VisibleForTesting
-  static AuthzServlet getTestingInstance(Authorizer authorizer) {
+  static AuthzServlet getTestingInstance(Authorizer authorizer, AuthnSessionManager sessionManager) {
     Preconditions.checkNotNull(authorizer);
-    return new AuthzServlet(authorizer);
+    return new AuthzServlet(authorizer, sessionManager);
   }
 
   @Override
@@ -72,8 +75,7 @@ public class AuthzServlet extends ServletBase implements PostableHttpServlet {
 
     AuthzResult result
         = authorizer.apply(
-            getResources(authzRequest),
-            authzRequest.getSubject(),
+            getResources(authzRequest), authzRequest.getSubject(),
             authzRequest.getMode() == AuthzRequest.Mode.FAST);
 
     AuthzResponse.Builder builder = AuthzResponse.newBuilder();

@@ -79,7 +79,7 @@ public class ExportedStateTest extends SecurityManagerTestCase {
     }
 
 
-    AuthnSession session = AuthnSession.getInstance(cfg);
+    AuthnSession session = AuthnSession.newInstance(cfg);
     session = loginToMechWithCredentials(cfg, session, formMech, null,
         AuthnPrincipal.make("user", "domain"));
     session = loginToMechWithCredentials(cfg, session, basicMech, null,

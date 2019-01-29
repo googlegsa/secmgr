@@ -14,6 +14,7 @@
 
 package com.google.enterprise.secmgr.servlets;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.enterprise.secmgr.common.ServletBase;
 import com.google.enterprise.secmgr.saml.Metadata;
@@ -60,7 +61,6 @@ public abstract class SamlServlet extends ServletBase {
   protected SAMLArtifactMap getArtifactMap() {
     return sharedData.getArtifactMap();
   }
-
   /**
    * Makes an OpenSAML message-context object and initializes it.
    *
@@ -71,26 +71,36 @@ public abstract class SamlServlet extends ServletBase {
    * @return A new message-context object.
    */
   @Nonnull
-  public <TI extends SAMLObject, TO extends SAMLObject, TN extends SAMLObject>
-        SAMLMessageContext<TI, TO, TN> makeSamlMessageContext(HttpServletRequest request)
-      throws IOException {
+  public static <TI extends SAMLObject, TO extends SAMLObject, TN extends SAMLObject>
+  SAMLMessageContext<TI, TO, TN> makeSamlMessageContext(HttpServletRequest request,
+      SamlSharedData sharedData) throws IOException {
     return sharedData.makeSamlMessageContext(Metadata.getInstance(request));
   }
 
-  /**
-   * Makes an OpenSAML message-context object and initializes it.
-   *
-   * @param <TI> The type of the request object.
-   * @param <TO> The type of the response object.
-   * @param <TN> The type of the name identifier used for subjects.`
-   * @param metadata The metadata to use.
-   * @return A new message-context object.
-   */
+  @VisibleForTesting
   @Nonnull
   public <TI extends SAMLObject, TO extends SAMLObject, TN extends SAMLObject>
-        SAMLMessageContext<TI, TO, TN> makeSamlMessageContext(Metadata metadata)
+  SAMLMessageContext<TI, TO, TN> makeSamlMessageContext(Metadata metadata)
       throws IOException {
     return sharedData.makeSamlMessageContext(metadata);
+  }
+
+
+  /**
+   * Initializes the peer entity components in an OpenSAML message-context
+   * object.  Assumes the peer's entity ID has been decoded from a request
+   * message.
+   *
+   * @param context A context to be initialized, which must have been generated
+   *     by {@link SamlSharedData#makeSamlMessageContext}.
+   * @param endpointType The type of the peer's endpoint.
+   * @param binding The binding over which communication will occur.
+   */
+  public static void initializePeerEntity(SAMLMessageContext<?, ?, ?> context, QName endpointType,
+      String binding, SamlSharedData sharedData)
+      throws IOException {
+    sharedData.initializePeerEntity(context, context.getInboundMessageIssuer(), endpointType,
+        binding);
   }
 
   /**
@@ -108,20 +118,4 @@ public abstract class SamlServlet extends ServletBase {
     sharedData.initializePeerEntity(context, peerEntityId, endpointType, binding);
   }
 
-  /**
-   * Initializes the peer entity components in an OpenSAML message-context
-   * object.  Assumes the peer's entity ID has been decoded from a request
-   * message.
-   *
-   * @param context A context to be initialized, which must have been generated
-   *     by {@link SamlSharedData#makeSamlMessageContext}.
-   * @param endpointType The type of the peer's endpoint.
-   * @param binding The binding over which communication will occur.
-   */
-  public void initializePeerEntity(SAMLMessageContext<?, ?, ?> context, QName endpointType,
-      String binding)
-      throws IOException {
-    sharedData.initializePeerEntity(context, context.getInboundMessageIssuer(), endpointType,
-        binding);
-  }
 }

@@ -14,6 +14,7 @@
 
 package com.google.enterprise.secmgr.ulf;
 
+import java.io.Serializable;
 import javax.annotation.concurrent.Immutable;
 
 /**
@@ -22,7 +23,7 @@ import javax.annotation.concurrent.Immutable;
  * Universal Login form UI.
  */
 @Immutable
-public class FormElement {
+public class FormElement implements Serializable {
 
   private final String name;
   private final String displayName;

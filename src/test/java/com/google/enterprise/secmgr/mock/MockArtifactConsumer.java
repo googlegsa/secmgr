@@ -20,6 +20,7 @@ import static com.google.enterprise.secmgr.saml.OpenSamlUtil.isSuccessfulStatus;
 
 import com.google.enterprise.secmgr.common.Decorator;
 import com.google.enterprise.secmgr.common.GettableHttpServlet;
+import com.google.enterprise.secmgr.common.HttpUtil;
 import com.google.enterprise.secmgr.common.SessionUtil;
 import com.google.enterprise.secmgr.modules.SamlAuthnClient;
 import com.google.enterprise.secmgr.saml.Metadata;
@@ -28,6 +29,7 @@ import com.google.enterprise.secmgr.saml.SamlSharedData;
 import com.google.enterprise.secmgr.servlets.ResponseParser;
 import com.google.enterprise.secmgr.servlets.SamlServlet;
 import java.io.IOException;
+import java.net.URI;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
@@ -62,9 +64,10 @@ public class MockArtifactConsumer extends SamlServlet implements GettableHttpSer
     HttpSession session = req.getSession();
     Decorator decorator = SessionUtil.getLogDecorator(req);
 
+    URI uri = HttpUtil.getRequestUri(req, false);
     SamlAuthnClient client
-        = SamlAuthnClient.make(Metadata.getInstance(req), Metadata.getSmEntityId(),
-            getSharedData());
+        = SamlAuthnClient.make(Metadata.getInstance(uri), Metadata.getSmEntityId(),
+            getSharedData(), SamlAuthnClient.DEFAULT_TIMEOUT, uri);
 
     // Always respond with redirect.
     initResponse(resp);

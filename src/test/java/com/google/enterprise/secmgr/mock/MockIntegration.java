@@ -178,7 +178,7 @@ public class MockIntegration {
     authzController = ConfigSingleton.getInstance(AuthorizationController.class);
     docFetcherController = ConfigSingleton.getInstance(DocumentFetcherController.class);
 
-    transport = new MockHttpTransport();
+    transport = ConfigSingleton.getInstance(MockHttpTransport.class);
     gsaHosts = Maps.newHashMap();
     addGsaHost(DEFAULT_GSA_HOST);
 
@@ -627,7 +627,11 @@ public class MockIntegration {
    * @return The session ID used by the mock GSA and the Security Manager.
    */
   public String getSessionId() {
-    return sessionId;
+    return userAgent.getSecMgrSessionId();
+  }
+
+  public void setSessionId(String sessionId) {
+    userAgent.setSecMgrSessionId(sessionId);
   }
 
   /**
@@ -639,7 +643,12 @@ public class MockIntegration {
    */
   public AuthnSession makeSession()
       throws IOException {
-    return AuthnSession.getInstance(sessionId);
+    AuthnSession authnSession = new AuthnSession(ConfigSingleton.getConfig(), sessionId);
+    return authnSession;
+  }
+
+  public void saveSession(AuthnSession session) {
+    authnSessionManager.saveSession(session);
   }
 
   /**
@@ -647,7 +656,8 @@ public class MockIntegration {
    * @throws AssertionFailedError if the session hasn't been created yet.
    */
   public AuthnSession getSession() {
-    AuthnSession session = authnSessionManager.getSession(sessionId);
+    String sessionId = userAgent.getSecMgrSessionId();
+    AuthnSession session = authnSessionManager.findSessionById(sessionId);
     assertNotNull(session);
     return session;
   }
@@ -806,9 +816,11 @@ public class MockIntegration {
    * Starts a test by sending an AuthzQuery to the Security Manager's PDP.
    *
    * @param sampleUrl The sample URL to authorize.
+   * @param session
    * @return The authorization status for the given sample URL.
    */
-  public AuthzStatus doAuthzQuery(String sampleUrl) {
+  public AuthzStatus doAuthzQuery(String sampleUrl,
+      AuthnSession session) {
     startTestMessage();
     try {
       // Submit the request using a SamlClient instance.
@@ -817,7 +829,7 @@ public class MockIntegration {
               SamlSharedData.make(C.entityIdForGsa(SecurityManagerTestCase.GSA_TESTING_ISSUER),
                   SamlSharedData.Role.AUTHZ_CLIENT, null));
       makeSession();
-      SecmgrCredential cred = OpenSamlUtil.makeSecmgrCredential(getSessionId(), "", "", "",
+      SecmgrCredential cred = OpenSamlUtil.makeSecmgrCredential(session.getSessionId(), "", "", "",
           Collections.<Group>emptyList());
       return
           samlClient.sendAuthzRequest(
@@ -897,7 +909,7 @@ public class MockIntegration {
 
   public void assertContentResult(int nGood, HttpExchange exchange) {
     assertContentResult(exchange);
-    assertGoodGroups(nGood);
+    assertGoodGroups(nGood, exchange);
   }
 
   public Element assertLoginFormResult(HttpExchange exchange) {
@@ -925,7 +937,7 @@ public class MockIntegration {
 
   public void assertLoginFormResult(int nGood, HttpExchange exchange) {
     assertLoginFormResult(exchange);
-    assertGoodGroups(nGood);
+    assertGoodGroups(nGood, exchange);
   }
 
   public void assertExchangeStatusOk(HttpExchange exchange) {
@@ -946,7 +958,7 @@ public class MockIntegration {
 
   public void assertStatusResult(int statusCode, int nGood, HttpExchange exchange) {
     assertStatusResult(statusCode, exchange);
-    assertGoodGroups(nGood);
+    assertGoodGroups(nGood, exchange);
   }
 
   public void assertRedirect(HttpExchange exchange, String redirectUrl) {
@@ -1029,14 +1041,15 @@ public class MockIntegration {
   /**
    * Assert that this many credential groups are verified.
    */
-  private void assertGoodGroups(int nGood) {
-    assertEquals("Incorrect number of verified groups", nGood, countGoodGroups());
+  private void assertGoodGroups(int nGood, HttpExchange exchange) {
+    assertEquals("Incorrect number of verified groups", nGood, countGoodGroups(exchange));
   }
 
   /**
    * @return The number of verified credential groups in the current session.
+   * @param exchange
    */
-  private int countGoodGroups() {
+  private int countGoodGroups(HttpExchange exchange) {
     int nGood = 0;
     SessionSnapshot snapshot = getSession().getSnapshot();
     for (CredentialGroup credentialGroup : snapshot.getConfig().getCredentialGroups()) {
