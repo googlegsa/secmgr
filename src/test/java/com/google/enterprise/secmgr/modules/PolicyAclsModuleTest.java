@@ -188,7 +188,8 @@ public class PolicyAclsModuleTest extends SecurityManagerTestCase {
         + "/" + "acl_urls_large.enterprise";
     String urls2Filename = FileUtil.getContextDirectory()
         + "/" + "acl_urls_2_large.enterprise";
-    runAuthorize(urlsFilename, urls2Filename, 100000);
+    // TODO: detect file read completion instead of sleeping for a definite amount of time
+    runAuthorize(urlsFilename, urls2Filename, 120000);
   }
 
   private void runAuthorize(String urlsFilename, String urls2Filename,

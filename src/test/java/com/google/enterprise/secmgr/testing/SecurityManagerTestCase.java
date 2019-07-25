@@ -36,6 +36,7 @@ import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestResult;
 import junit.framework.TestSuite;
+import junit.textui.ResultPrinter;
 import junit.textui.TestRunner;
 import org.easymock.EasyMockSupport;
 import org.joda.time.DateTimeUtils;
@@ -168,10 +169,24 @@ public class SecurityManagerTestCase extends TearDownTestCase {
    * @throws AssertionFailedError if the test had one or more failures.
    */
   public static void runTestCase(Test test) {
-    TestRunner runner = (new TestRunner(getPrintStream()));
+    TestRunner runner = new TestRunner(new SecurityManagerTestResultPrinter(getPrintStream()));
     TestResult result = runner.doRun(test);
     if (!result.wasSuccessful()) {
       throw new AssertionFailedError("Nested test had failures.");
+    }
+  }
+
+  private static class SecurityManagerTestResultPrinter extends ResultPrinter {
+
+    public SecurityManagerTestResultPrinter(PrintStream writer) {
+      super(writer);
+    }
+
+    /*
+     * Overriding this method to prevent jUnit of flooding the console with dots
+     */
+    @Override
+    public void startTest(Test test) {
     }
   }
 

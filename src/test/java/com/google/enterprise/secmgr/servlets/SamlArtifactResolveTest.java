@@ -88,7 +88,6 @@ public class SamlArtifactResolveTest extends SecurityManagerTestCase {
     samlArtifactResolveInstance.doPost(mockRequest, mockResponse);
 
     String returnedContent = mockResponse.getContentAsString();
-    System.out.println("content: \n" + returnedContent);
 
     /** make sure we got something back */
     assertTrue(!returnedContent.isEmpty());

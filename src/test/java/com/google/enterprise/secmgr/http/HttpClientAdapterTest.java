@@ -211,7 +211,7 @@ public class HttpClientAdapterTest extends SecurityManagerTestCase {
     // Count number of requests that completed "immediately":
     int nImmediate = 0;
     for (long delta : deltas) {
-      if (delta < 1500) {
+      if (delta < 2000) {
         nImmediate += 1;
       }
     }

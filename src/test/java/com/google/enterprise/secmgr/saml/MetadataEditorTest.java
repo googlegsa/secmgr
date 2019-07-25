@@ -56,11 +56,9 @@ public class MetadataEditorTest extends SecurityManagerTestCase {
     MetadataEditor.writeMetadataDocument(base, fileWriter);
     fileWriter.close();
     filecontents = slurpFile(file);
-    // System.out.println(filecontents);
     clientCert
         = MetadataEditor.normalizeCertificate(
             slurpFile(FileUtil.getContextFile("saml-client-test.crt")));
-    // System.out.println(clientCert);
   }
 
   public void testGetClients() throws Exception {
@@ -112,7 +110,6 @@ public class MetadataEditorTest extends SecurityManagerTestCase {
     SamlClientIdp client1 = makeClient(URL2, clientCert);
     List<SamlClientIdp> clients = ImmutableList.of(client0, client1);
     String contents = MetadataEditor.setSamlClientsInMetadata(filecontents, clients);
-    // System.out.println(contents);
 
     // Parse the document and extract the clients.
     Document document = MetadataEditor.stringToMetadataDocument(contents);

@@ -16,7 +16,16 @@ package com.google.enterprise.secmgr.common;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.util.List;
+import javax.xml.XMLConstants;
+import javax.xml.namespace.QName;
+import org.apache.xerces.dom.DOMInputImpl;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Comment;
 import org.w3c.dom.DOMConfiguration;
@@ -33,17 +42,8 @@ import org.w3c.dom.ls.LSException;
 import org.w3c.dom.ls.LSInput;
 import org.w3c.dom.ls.LSOutput;
 import org.w3c.dom.ls.LSParser;
+import org.w3c.dom.ls.LSResourceResolver;
 import org.w3c.dom.ls.LSSerializer;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.Reader;
-import java.io.StringWriter;
-import java.io.Writer;
-import java.util.List;
-
-import javax.xml.XMLConstants;
-import javax.xml.namespace.QName;
 
 /**
  * Utilities for manipulating XML files.
@@ -169,6 +169,16 @@ public class XmlUtil {
     LSInput lsInput = domImplLs.createLSInput();
     lsInput.setCharacterStream(input);
     LSParser parser = domImplLs.createLSParser(DOMImplementationLS.MODE_SYNCHRONOUS, null);
+    parser.getDomConfig().setParameter("resource-resolver", new LSResourceResolver(){
+      @Override
+      public LSInput resolveResource(
+          String type, String namespaceURI, String publicId, String systemId, String baseURI) {
+        // Explicitly disable external resource resolving
+        final LSInput input = new DOMInputImpl();
+        input.setByteStream(new ByteArrayInputStream("".getBytes()));
+        return input;
+      }
+    });
     try {
       return parser.parse(lsInput);
     } catch (LSException e) {

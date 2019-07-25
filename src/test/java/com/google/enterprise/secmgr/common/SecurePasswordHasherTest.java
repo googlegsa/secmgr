@@ -91,7 +91,6 @@ public class SecurePasswordHasherTest extends TestCase {
 
   public void testMacInput() {
     String mac = SecurePasswordHasher.getMac(kUsername, kPassword);
-    System.out.println(mac);
 
     // Ensure mac function is deterministic (unlike fingerprint function)
     assertEquals(mac, SecurePasswordHasher.getMac(kUsername, kPassword));

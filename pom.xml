@@ -64,6 +64,14 @@
           <!-- 2 forks per cpu-core, don't reuse them (full isolation) -->
           <forkCount>2C</forkCount>
           <reuseForks>false</reuseForks>
+          <systemProperties>
+            <property>
+              <name>java.util.logging.config.file</name>
+              <value>src/test/resources/logging.properties</value>
+            </property>
+          </systemProperties>
+          <!-- workaround for unexpected vm exit errors -->
+          <useSystemClassLoader>false</useSystemClassLoader>
         </configuration>
       </plugin>
     </plugins>
@@ -104,6 +112,11 @@
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpmime</artifactId>
       <version>${httpcomponents.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>xerces</groupId>
+      <artifactId>xercesImpl</artifactId>
+      <version>2.12.0</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>

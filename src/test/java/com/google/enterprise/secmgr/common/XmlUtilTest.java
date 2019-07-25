@@ -47,6 +47,21 @@ public class XmlUtilTest {
     assertEquals("hello, world", Files.asCharSource(tempFile, UTF_8).readFirstLine());
   }
 
+  /** Confirms that XML parsing is working. */
+  @Test
+  public void readXmlDocument() throws IOException {
+    String xml = "<?xml version=\"1.0\"?>"
+        + "<root xmlns=\"foo\" xmlns:xi=\"http://www.w3.org/2001/XInclude\">"
+        + "<element param=\"abcde\"><child param2=\"555\" param3=\"1234\">text"
+        + "</child></element><anotherElement>Content</anotherElement>"
+        + "</root>";
+
+    Document doc = XmlUtil.getInstance().readXmlDocument(new StringReader(xml));
+    assertNotNull(doc);
+    Element root = doc.getDocumentElement();
+    assertEquals("textContent", root.getTextContent());
+  }
+
   /** Confirms that XML external entities are not resolved. */
   @Test
   public void readXmlDocument_xxe() throws IOException {
