@@ -26,9 +26,6 @@ import com.google.enterprise.secmgr.saml.OpenSamlUtil;
 import com.google.enterprise.secmgr.saml.SamlSharedData;
 import com.google.enterprise.secmgr.saml.SecmgrCredential;
 import com.google.inject.Singleton;
-
-import org.opensaml.xml.security.SecurityException;
-
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -36,6 +33,7 @@ import java.util.logging.Logger;
 
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
+import org.opensaml.messaging.handler.MessageHandlerException;
 
 /**
  * A module that implements authorization support for SAML clients.
@@ -92,7 +90,7 @@ public final class SamlModule implements AuthzModule {
           view.hasVerifiedPassword() ? view.getVerifiedPassword().getText() : null,
           samlGroups);
       return samlClient.sendAuthzRequest(protocol, urls, cred, decorator, timeout);
-    } catch (SecurityException e) {
+    } catch (MessageHandlerException e) {
       logger.warning(view.logMessage(e.getMessage()));
       return AuthzResult.makeIndeterminate(urls);
     }

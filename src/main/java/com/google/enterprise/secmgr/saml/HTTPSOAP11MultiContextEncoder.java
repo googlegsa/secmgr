@@ -14,143 +14,48 @@
 
 package com.google.enterprise.secmgr.saml;
 
-import org.opensaml.Configuration;
-import org.opensaml.common.SAMLObject;
-import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.binding.encoding.BaseSAML2MessageEncoder;
-import org.opensaml.ws.message.MessageContext;
-import org.opensaml.ws.message.encoder.MessageEncodingException;
-import org.opensaml.ws.soap.common.SOAPObjectBuilder;
-import org.opensaml.ws.soap.soap11.Body;
-import org.opensaml.ws.soap.soap11.Envelope;
-import org.opensaml.ws.transport.http.HTTPOutTransport;
-import org.opensaml.ws.transport.http.HTTPTransportUtils;
-import org.opensaml.xml.XMLObjectBuilderFactory;
-import org.opensaml.xml.util.XMLHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.IOException;
+import net.shibboleth.utilities.java.support.xml.SerializeSupport;
+import org.opensaml.messaging.encoder.MessageEncodingException;
+import org.opensaml.saml.common.binding.encoding.SAMLMessageEncoder;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.saml2.binding.encoding.impl.HTTPSOAP11Encoder;
 import org.w3c.dom.Element;
 
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
-import java.io.Writer;
-
 /**
- * SAML 2.0 SOAP 1.1 over HTTP MultiContext binding encoder.
- * Based on OpenSaml's HTTPSOAP11Encoder
+ * SAML 2.0 SOAP 1.1 over HTTP MultiContext binding encoder. Based on OpenSaml's HTTPSOAP11Encoder
  */
-public class HTTPSOAP11MultiContextEncoder extends BaseSAML2MessageEncoder {
-
-  private Envelope envelope;
-  private Body body;
-  private HTTPOutTransport outTransport;
-
-  /** Class logger. */
-  private final Logger logger = LoggerFactory.getLogger(HTTPSOAP11MultiContextEncoder.class);
+public class HTTPSOAP11MultiContextEncoder extends HTTPSOAP11Encoder implements SAMLMessageEncoder {
 
   /** Constructor. */
   public HTTPSOAP11MultiContextEncoder() {
     super();
   }
 
+  @Override
   public String getBindingURI() {
     return SAMLConstants.SAML2_SOAP11_BINDING_URI;
   }
 
-  public boolean providesMessageConfidentiality(MessageContext messageContext) {
-    if (messageContext.getOutboundMessageTransport().isConfidential()) {
-      return true;
-    }
-
-    return false;
-  }
-
-  public boolean providesMessageIntegrity(MessageContext messageContext) {
-    if (messageContext.getOutboundMessageTransport().isIntegrityProtected()) {
-      return true;
-    }
-
-    return false;
+  @Override
+  protected String getSOAPAction() {
+    return "http://www.oasis-open.org/committees/security";
   }
 
   @Override
-  protected void doEncode(MessageContext messageContext) throws MessageEncodingException {
-    if (!(messageContext instanceof SAMLMessageContext<?, ?, ?>)) {
-      logger.error("Invalid message context type, this encoder only supports SAMLMessageContext");
-      throw new MessageEncodingException(
-          "Invalid message context type, this encoder only supports SAMLMessageContext");
-    }
-    @SuppressWarnings("unchecked")
-    SAMLMessageContext<SAMLObject, SAMLObject, SAMLObject> samlMsgCtx =
-        (SAMLMessageContext<SAMLObject, SAMLObject, SAMLObject>) messageContext;
-
-    if (!(messageContext.getOutboundMessageTransport() instanceof HTTPOutTransport)) {
-      logger.error(
-          "Invalid outbound message transport type, this encoder only supports HTTPOutTransport");
-      throw new MessageEncodingException(
-          "Invalid outbound message transport type, this encoder only supports HTTPOutTransport");
-    }
-    outTransport = (HTTPOutTransport) messageContext.getOutboundMessageTransport();
-
-    if (envelope == null) {
-      buildSOAPMessage();
-    }
-
-    SAMLObject samlMessage = samlMsgCtx.getOutboundSAMLMessage();
-    if (samlMessage == null) {
-      throw new MessageEncodingException("No outbound SAML message contained in message context");
-    }
-
-    signMessage(samlMsgCtx);
-    samlMsgCtx.setOutboundMessage(envelope);
-
-    if (logger.isDebugEnabled()) {
-      logger.debug("Adding SAML message to the SOAP message's body");
-    }
-
-    body.getUnknownXMLObjects().add(samlMessage);
+  protected void doEncode() throws MessageEncodingException {
+    // Do nothing here - the actual encoding is implemented in HTTPSOAP11Encoder.prepareContext()
+    // Writing to the output is done by finish(), when all
   }
 
   public void finish() throws MessageEncodingException {
-    Element envelopeElem = marshallMessage(envelope);
+    Element envelopeElem = marshallMessage(getSOAPEnvelope());
+    prepareHttpServletResponse();
     try {
-      HTTPTransportUtils.addNoCacheHeaders(outTransport);
-      HTTPTransportUtils.setUTF8Encoding(outTransport);
-      HTTPTransportUtils.setContentType(outTransport, "text/xml");
-      outTransport.setHeader("SOAPAction", "http://www.oasis-open.org/committees/security");
-      Writer out = new OutputStreamWriter(outTransport.getOutgoingStream(), "UTF-8");
-      XMLHelper.writeNode(envelopeElem, out);
-      out.flush();
-    } catch (UnsupportedEncodingException e) {
-      logger.error("JVM does not support required UTF-8 encoding");
-      throw new MessageEncodingException("JVM does not support required UTF-8 encoding");
+      SerializeSupport.writeNode(envelopeElem, getHttpServletResponse().getOutputStream());
     } catch (IOException e) {
-      logger.error("Unable to write message content to outbound stream", e);
-      throw new MessageEncodingException("Unable to write message content to outbound stream", e);
+      throw new MessageEncodingException(
+          "Problem writing SOAP envelope to servlet output stream", e);
     }
-  }
-
-  /**
-   * Builds the SOAP message to be encoded.
-   */
-  protected void buildSOAPMessage() {
-    if (logger.isDebugEnabled()) {
-      logger.debug("Building SOAP message");
-    }
-    XMLObjectBuilderFactory builderFactory = Configuration.getBuilderFactory();
-
-    @SuppressWarnings("unchecked")
-    SOAPObjectBuilder<Envelope> envBuilder =
-        (SOAPObjectBuilder<Envelope>) builderFactory.getBuilder(Envelope.DEFAULT_ELEMENT_NAME);
-    envelope = envBuilder.buildObject();
-
-    @SuppressWarnings("unchecked")
-    SOAPObjectBuilder<Body> bodyBuilder =
-        (SOAPObjectBuilder<Body>) builderFactory.getBuilder(Body.DEFAULT_ELEMENT_NAME);
-    body = bodyBuilder.buildObject();
-
-    envelope.setBody(body);
   }
 }

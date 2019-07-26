@@ -41,18 +41,11 @@ import com.google.enterprise.secmgr.ulf.FormElement;
 import com.google.enterprise.secmgr.ulf.UniversalLoginForm;
 import com.google.enterprise.secmgr.ulf.UniversalLoginFormHtml;
 import com.google.enterprise.sessionmanager.SessionManagerInterfaceBase;
-
-import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.saml2.core.AuthnRequest;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.Response;
-
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.logging.Logger;
-
 import javax.annotation.Nonnull;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.GuardedBy;
@@ -60,6 +53,8 @@ import javax.annotation.concurrent.Immutable;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.saml.common.SAMLObject;
 
 /**
  * An object to represent the session information for authentication.
@@ -88,9 +83,9 @@ public class AuthnSession {
   }
 
   /**
-   * A combination of a credentials gatherer and an authentication mechanism.
-   * The authentication controller loops over all possible combinations of these
-   * to decide which credentials gatherers to try with which mechanisms.
+   * A combination of a credentials gatherer and an authentication mechanism. The authentication
+   * controller loops over all possible combinations of these to decide which credentials gatherers
+   * to try with which mechanisms.
    */
   @Immutable
   @ParametersAreNonnullByDefault
@@ -134,7 +129,8 @@ public class AuthnSession {
   @GuardedBy("this")
   private String requestId;
   @GuardedBy("this")
-  private SAMLMessageContext<AuthnRequest, Response, NameID> samlSsoContext;
+  private MessageContext<SAMLObject> samlSsoContext;
+
   @GuardedBy("this")
   private URL authnEntryUrl;
   @GuardedBy("this")
@@ -495,16 +491,13 @@ public class AuthnSession {
   /**
    * Indicates that we are starting to process an authentication request.
    *
-   * @param url The entry point URL.  Any query or fragment in the given URL
-   *     will be discarded.
-   * @param samlSsoContext The SAML message context object.  This is the context
-   *     for the "server" side of the security manager, where we are acting as
-   *     an IdP for the GSA.
+   * @param url The entry point URL. Any query or fragment in the given URL will be discarded.
+   * @param samlSsoContext The SAML message context object. This is the context for the "server"
+   *     side of the security manager, where we are acting as an IdP for the GSA.
    * @throws IOException if URL can't be parsed.
    */
-  public synchronized void setStateAuthenticating(URL url,
-      SAMLMessageContext<AuthnRequest, Response, NameID> samlSsoContext)
-      throws IOException {
+  public synchronized void setStateAuthenticating(
+      URL url, MessageContext<SAMLObject> samlSsoContext) throws IOException {
     Preconditions.checkNotNull(url);
     Preconditions.checkNotNull(samlSsoContext);
     setState(AuthnState.AUTHENTICATING, AuthnState.IDLE);
@@ -554,14 +547,13 @@ public class AuthnSession {
   }
 
   /**
-   * Gets the SAML message context for the session's current SSO exchange.  This
-   * is the context for the "server" side of the security manager, where we are
-   * acting as an IdP for the GSA.
+   * Gets the SAML message context for the session's current SSO exchange. This is the context for
+   * the "server" side of the security manager, where we are acting as an IdP for the GSA.
    *
    * @return The message context object.
    * @throws InconsistentStateException if the current state is IDLE.
    */
-  public synchronized SAMLMessageContext<AuthnRequest, Response, NameID> getSamlSsoContext() {
+  public synchronized MessageContext<SAMLObject> getSamlSsoContext() {
     assertNotIdleState();
     return samlSsoContext;
   }
@@ -827,9 +819,8 @@ public class AuthnSession {
   }
 
   /**
-   * The exception thrown by the session when it detects that a session
-   * operation is being used while the controller is in a state that doesn't
-   * support that operation.
+   * The exception thrown by the session when it detects that a session operation is being used
+   * while the controller is in a state that doesn't support that operation.
    */
   @Immutable
   public static final class InconsistentStateException extends IllegalStateException {

@@ -17,7 +17,15 @@
     <httpcomponents.version>4.5.2</httpcomponents.version>
     <protobuf.version>3.5.1</protobuf.version>
     <guava.version>25.1-jre</guava.version>
+    <opensaml.version>3.3.1</opensaml.version>
   </properties>
+
+  <repositories>
+    <repository>
+      <id>shibboleth</id>
+      <url>https://build.shibboleth.net/nexus/content/repositories/releases/</url>
+    </repository>
+  </repositories>
 
   <build>
     <plugins>
@@ -100,8 +108,28 @@
     </dependency>
     <dependency>
       <groupId>org.opensaml</groupId>
-      <artifactId>opensaml</artifactId>
-      <version>2.6.4</version>
+      <artifactId>opensaml-saml-impl</artifactId>
+      <version>${opensaml.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opensaml</groupId>
+      <artifactId>opensaml-security-impl</artifactId>
+      <version>${opensaml.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opensaml</groupId>
+      <artifactId>opensaml-soap-impl</artifactId>
+      <version>${opensaml.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opensaml</groupId>
+      <artifactId>opensaml-xmlsec-impl</artifactId>
+      <version>${opensaml.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opensaml</groupId>
+      <artifactId>opensaml-messaging-impl</artifactId>
+      <version>${opensaml.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
@@ -237,6 +265,12 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-text</artifactId>
       <version>1.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>xmlunit</groupId>
+      <artifactId>xmlunit</artifactId>
+      <version>1.6</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

@@ -14,16 +14,31 @@
 
 package com.google.enterprise.secmgr.saml;
 
-import org.opensaml.common.impl.AbstractSAMLObjectMarshaller;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.util.XMLHelper;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.core.xml.io.MarshallingException;
+import org.opensaml.saml.common.AbstractSAMLObjectMarshaller;
+import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Text;
 
 // This class should be part of OpenSAML but is missing from there.
 public class AttributeValueMarshaller
     extends AbstractSAMLObjectMarshaller {
   @Override
-  protected void marshallElementContent(XMLObject xmlObject, Element domElement) {
-    XMLHelper.appendTextContent(domElement, AttributeValueImpl.class.cast(xmlObject).getValue());
+  protected void marshallElementContent(XMLObject xmlObject, Element domElement)
+      throws MarshallingException {
+    appendTextContent(domElement, ((AttributeValueImpl) xmlObject).getValue());
+  }
+
+  /**
+   * From OpenSAML 2
+   */
+  private static void appendTextContent(Element domElement, String textContent) {
+    if (textContent == null) {
+      return;
+    }
+    Document parentDocument = domElement.getOwnerDocument();
+    Text textNode = parentDocument.createTextNode(textContent);
+    domElement.appendChild(textNode);
   }
 }

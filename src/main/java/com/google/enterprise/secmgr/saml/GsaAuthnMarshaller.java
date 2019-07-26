@@ -15,9 +15,9 @@
  */
 package com.google.enterprise.secmgr.saml;
 
-import org.opensaml.common.impl.AbstractSAMLObjectMarshaller;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.util.XMLHelper;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.core.xml.util.XMLObjectSupport;
+import org.opensaml.saml.common.AbstractSAMLObjectMarshaller;
 import org.w3c.dom.Element;
 
 /** A marshaller (object to XML converter) for {@link GsaAuthn}. */
@@ -25,9 +25,9 @@ final class GsaAuthnMarshaller extends AbstractSAMLObjectMarshaller {
   @Override
   protected void marshallAttributes(XMLObject xmlObject, Element domElement) {
     GsaAuthn object = (GsaAuthn) xmlObject;
-    XMLHelper.marshallAttribute(GsaAuthn.VERSION_ATTRIB_NAME, Integer.toString(object.getVersion()),
-        domElement, false);
-    XMLHelper.marshallAttribute(GsaAuthn.SESSION_ID_ATTRIB_NAME, object.getSessionId(),
-        domElement, false);
+    XMLObjectSupport.marshallAttribute(
+        GsaAuthn.VERSION_ATTRIB_NAME, Integer.toString(object.getVersion()), domElement, false);
+    XMLObjectSupport.marshallAttribute(
+        GsaAuthn.SESSION_ID_ATTRIB_NAME, object.getSessionId(), domElement, false);
   }
 }

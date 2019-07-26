@@ -19,13 +19,14 @@ import com.google.enterprise.secmgr.common.SecurityManagerUtil;
 import com.google.enterprise.secmgr.testing.SecurityManagerTestCase;
 import com.google.enterprise.util.C;
 import java.io.File;
-import java.io.IOException;
 import java.util.logging.Logger;
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.metadata.Endpoint;
-import org.opensaml.saml2.metadata.EntitiesDescriptor;
-import org.opensaml.saml2.metadata.EntityDescriptor;
-import org.opensaml.saml2.metadata.IDPSSODescriptor;
+import javax.xml.namespace.QName;
+import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
+import net.shibboleth.utilities.java.support.resolver.ResolverException;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.saml2.metadata.Endpoint;
+import org.opensaml.saml.saml2.metadata.EntityDescriptor;
+import org.opensaml.saml.saml2.metadata.IDPSSODescriptor;
 import org.w3c.dom.Document;
 
 /**
@@ -91,7 +92,9 @@ public class MetadataTest extends SecurityManagerTestCase {
       Thread.sleep(1000);
     }
     Metadata metadata = Metadata.getInstanceForTest(HOST1);
-    metadata.getMetadata();  // Force the information to be read and cached.
+    metadata
+        .getResolver()
+        .resolve(new CriteriaSet()); // Force the information to be read and cached.
     logger.info("Modifying metadata file");
     Document document = MetadataEditor.readMetadataDocument(tempSamlMetadata);
     MetadataEditor.addIdpEntity(document,
@@ -200,10 +203,10 @@ public class MetadataTest extends SecurityManagerTestCase {
     logger.info("Metadata file mod time: " + tempSamlMetadata.lastModified());
   }
 
-  private EntitiesDescriptor findClientsDescriptor(Metadata metadata)
-      throws IOException {
-    for (EntitiesDescriptor child : metadata.getMetadata().getEntitiesDescriptors()) {
-      if (MetadataEditor.SECMGR_CLIENTS_ENTITIES_NAME.equals(child.getName())) {
+  private EntityDescriptor findClientsDescriptor(Metadata metadata) throws ResolverException {
+    for (EntityDescriptor child : metadata.getResolver().resolve(new CriteriaSet())) {
+      if (MetadataEditor.SECMGR_CLIENTS_ENTITIES_NAME.equals(
+          child.getUnknownAttributes().get(QName.valueOf("Name")))) {
         return child;
       }
     }

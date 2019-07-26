@@ -23,29 +23,38 @@ import com.google.common.collect.ImmutableMap;
 import com.google.enterprise.secmgr.common.FileUtil;
 import com.google.enterprise.secmgr.config.ConfigSingleton;
 import com.google.enterprise.secmgr.config.SecurityManagerConfig;
-
-import org.opensaml.common.SAMLObject;
-import org.opensaml.common.binding.BasicEndpointSelector;
-import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.common.binding.artifact.SAMLArtifactMap;
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.metadata.EntityDescriptor;
-import org.opensaml.saml2.metadata.IDPSSODescriptor;
-import org.opensaml.saml2.metadata.PDPDescriptor;
-import org.opensaml.saml2.metadata.RoleDescriptor;
-import org.opensaml.saml2.metadata.SPSSODescriptor;
-import org.opensaml.xml.security.credential.Credential;
-
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.Immutable;
 import javax.xml.namespace.QName;
+import net.shibboleth.utilities.java.support.component.ComponentInitializationException;
+import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
+import net.shibboleth.utilities.java.support.resolver.ResolverException;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.saml.common.SAMLObject;
+import org.opensaml.saml.common.binding.artifact.SAMLArtifactMap;
+import org.opensaml.saml.common.binding.impl.DefaultEndpointResolver;
+import org.opensaml.saml.common.messaging.context.SAMLEndpointContext;
+import org.opensaml.saml.common.messaging.context.SAMLMetadataContext;
+import org.opensaml.saml.common.messaging.context.SAMLPeerEntityContext;
+import org.opensaml.saml.common.messaging.context.SAMLSelfEntityContext;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.criterion.BindingCriterion;
+import org.opensaml.saml.criterion.EndpointCriterion;
+import org.opensaml.saml.criterion.RoleDescriptorCriterion;
+import org.opensaml.saml.saml2.metadata.Endpoint;
+import org.opensaml.saml.saml2.metadata.EntityDescriptor;
+import org.opensaml.saml.saml2.metadata.IDPSSODescriptor;
+import org.opensaml.saml.saml2.metadata.PDPDescriptor;
+import org.opensaml.saml.saml2.metadata.RoleDescriptor;
+import org.opensaml.saml.saml2.metadata.SPSSODescriptor;
+import org.opensaml.security.credential.Credential;
 
 /**
  * An object for sharing common information between the parts of a SAML IdP.
@@ -200,59 +209,97 @@ public final class SamlSharedData {
   /**
    * Makes an OpenSAML message-context object and initializes it.
    *
-   * @param <TI> The type of the request object.
-   * @param <TO> The type of the response object.
-   * @param <TN> The type of the name identifier used for subjects.
    * @param metadata The metadata to use for initialization
    * @return A new message-context object.
    */
   @Nonnull
-  public <TI extends SAMLObject, TO extends SAMLObject, TN extends SAMLObject>
-        SAMLMessageContext<TI, TO, TN> makeSamlMessageContext(Metadata metadata)
+  public MessageContext<SAMLObject> makeSamlMessageContext(Metadata metadata)
       throws IOException {
-    SAMLMessageContext<TI, TO, TN> context = OpenSamlUtil.makeSamlMessageContext();
-    context.setMetadataProvider(metadata.getProvider());
+    MessageContext<SAMLObject> context = OpenSamlUtil.makeSamlMessageContext();
     String localEntityId = getLocalEntityId();
+    SAMLSelfEntityContext selfEntityContext =
+        context.getSubcontext(SAMLSelfEntityContext.class, true);
+    selfEntityContext.setEntityId(localEntityId);
+    selfEntityContext.setRole(getLocalRoleDescriptorName());
     EntityDescriptor localEntity = metadata.getEntity(localEntityId);
-    context.setLocalEntityId(localEntityId);
-    context.setLocalEntityMetadata(localEntity);
-    context.setOutboundMessageIssuer(localEntityId);
-    QName localRoleDescriptorName = getLocalRoleDescriptorName();
-    context.setLocalEntityRole(localRoleDescriptorName);
-    context.setLocalEntityRoleMetadata(getRoleDescriptor(localEntity, localRoleDescriptorName));
-    context.setPeerEntityRole(getPeerRoleDescriptorName());
-    context.setOutboundSAMLMessageSigningCredential(getSigningCredential());
+    SAMLMetadataContext samlMetadataContext =
+        context.getSubcontext(SAMLMetadataContext.class, true);
+    samlMetadataContext.setEntityDescriptor(localEntity);
+    samlMetadataContext.setRoleDescriptor(
+        getRoleDescriptor(localEntity, getLocalRoleDescriptorName()));
+    SAMLPeerEntityContext peerEntityContext =
+        context.getSubcontext(SAMLPeerEntityContext.class, true);
+    peerEntityContext.setRole(getPeerRoleDescriptorName());
+    Metadata.MetadataContext metadataContext =
+        context.getSubcontext(Metadata.MetadataContext.class, true);
+    metadataContext.setMetadata(metadata);
+    OpenSamlUtil.initializeSigningParameters(context, getSigningCredential());
     return context;
   }
 
   /**
    * Initializes the peer entity components in an OpenSAML message-context object.
    *
-   * @param context A context to be initialized, which must have been generated
-   *     by {@link #makeSamlMessageContext}.
+   * @param context A context to be initialized, which must have been generated by {@link
+   *     #makeSamlMessageContext}.
    * @param peerEntityId The entity ID of a peer.
    * @param endpointType The type of the peer's endpoint.
    * @param binding The binding over which communication will occur.
    */
-  public void initializePeerEntity(SAMLMessageContext<?, ?, ?> context, String peerEntityId,
-      QName endpointType, String binding)
+  public void initializePeerEntity(
+      MessageContext<SAMLObject> context,
+      String peerEntityId,
+      QName endpointType,
+      String binding)
       throws IOException {
-    context.setPeerEntityId(peerEntityId);
-    EntityDescriptor peerEntity = Metadata.findEntity(peerEntityId, context.getMetadataProvider());
+    SAMLPeerEntityContext peerEntityContext = context.getSubcontext(SAMLPeerEntityContext.class);
+    peerEntityContext.setEntityId(peerEntityId);
+    Metadata.MetadataContext metadataContext =
+        context.getSubcontext(Metadata.MetadataContext.class);
+    EntityDescriptor peerEntity =
+        Metadata.findEntity(peerEntityId, metadataContext.getMetadata().getResolver());
     if (peerEntity == null) {
       logger.info("No peer entity found for :" + peerEntityId);
       return;
     }
-    context.setPeerEntityMetadata(peerEntity);
+    SAMLMetadataContext peerEntityMetadataContext =
+        peerEntityContext.getSubcontext(SAMLMetadataContext.class, true);
+    peerEntityMetadataContext.setEntityDescriptor(peerEntity);
     RoleDescriptor roleDescriptor = getRoleDescriptor(peerEntity, getPeerRoleDescriptorName());
-    context.setPeerEntityRoleMetadata(roleDescriptor);
-    {
-      BasicEndpointSelector selector = new BasicEndpointSelector();
-      selector.setEntityMetadata(peerEntity);
-      selector.setEndpointType(endpointType);
-      selector.setEntityRoleMetadata(roleDescriptor);
-      selector.getSupportedIssuerBindings().add(binding);
-      context.setPeerEntityEndpoint(selector.selectEndpoint());
+    peerEntityMetadataContext.setRoleDescriptor(roleDescriptor);
+    SAMLEndpointContext endpointContext =
+        peerEntityContext.getSubcontext(SAMLEndpointContext.class, true);
+    setEndpoint(endpointType, binding, roleDescriptor, endpointContext);
+  }
+
+  private void setEndpoint(
+      QName endpointType,
+      String binding,
+      RoleDescriptor roleDescriptor,
+      SAMLEndpointContext endpointContext) {
+    CriteriaSet criteria = new CriteriaSet();
+
+    DefaultEndpointResolver<Endpoint> endpointResolver = new DefaultEndpointResolver<>();
+    // Sample endpoint with binding only and EndpointCriterion with trust=false
+    Endpoint sampleEndpoint =
+        (Endpoint) OpenSamlUtil.makeSamlObjectBuilder(endpointType).buildObject(endpointType);
+    sampleEndpoint.setBinding(binding);
+    EndpointCriterion<Endpoint> endpointCriterion = new EndpointCriterion<>(sampleEndpoint, false);
+    criteria.add(endpointCriterion);
+
+    RoleDescriptorCriterion roleDescriptorCriterion = new RoleDescriptorCriterion(roleDescriptor);
+    criteria.add(roleDescriptorCriterion);
+
+    BindingCriterion bindingCriterion = new BindingCriterion(Arrays.asList(binding));
+    criteria.add(bindingCriterion);
+
+    try {
+      endpointResolver.initialize();
+      endpointContext.setEndpoint(endpointResolver.resolveSingle(criteria));
+    } catch (ResolverException | ComponentInitializationException e) {
+      // Safe to ignore
+      logger.info("No endpoint found for peer binding: " + binding);
+      return;
     }
   }
 

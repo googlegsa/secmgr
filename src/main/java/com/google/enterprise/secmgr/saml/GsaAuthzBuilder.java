@@ -15,7 +15,7 @@
  */
 package com.google.enterprise.secmgr.saml;
 
-import org.opensaml.common.impl.AbstractSAMLObjectBuilder;
+import org.opensaml.saml.common.AbstractSAMLObjectBuilder;
 
 /** A factory for {@link GsaAuthz}. */
 final class GsaAuthzBuilder extends AbstractSAMLObjectBuilder<GsaAuthz> {

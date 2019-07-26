@@ -18,14 +18,11 @@ package com.google.enterprise.secmgr.saml;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.enterprise.secmgr.common.AuthzStatus;
-
-import org.opensaml.common.impl.AbstractSAMLObject;
-import org.opensaml.xml.XMLObject;
-
 import java.net.URI;
 import java.util.List;
-
 import javax.annotation.ParametersAreNonnullByDefault;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.saml.common.AbstractSAMLObject;
 
 /** An implementation for {@link Resource}. */
 @ParametersAreNonnullByDefault

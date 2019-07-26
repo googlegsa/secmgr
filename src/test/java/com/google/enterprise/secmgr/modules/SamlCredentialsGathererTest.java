@@ -71,12 +71,10 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeUtils;
-import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.core.AttributeStatement;
-import org.opensaml.saml2.core.AuthnRequest;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.Response;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.saml.common.SAMLObject;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.saml2.core.AttributeStatement;
 
 /**
  * Tests of the SAML client.
@@ -119,8 +117,8 @@ public class SamlCredentialsGathererTest extends SecurityManagerTestCase {
     // We always sign with the same credential, independent of the
     // configuration metadata.  This allows testing what happens when the
     // configured credential doesn't match the actual credential.
-    Supplier<org.opensaml.xml.security.credential.Credential> signingCredentialSupplier
-        = Suppliers.<org.opensaml.xml.security.credential.Credential>ofInstance(
+    Supplier<org.opensaml.security.credential.Credential> signingCredentialSupplier =
+        Suppliers.<org.opensaml.security.credential.Credential>ofInstance(
             OpenSamlUtil.readX509Credential(
                 FileUtil.getContextFile("saml-client-test.crt"),
                 FileUtil.getContextFile("saml-client-test.key")));
@@ -160,9 +158,13 @@ public class SamlCredentialsGathererTest extends SecurityManagerTestCase {
     }
   }
 
-  private static MockSamlIdp makeSamlIdp(Metadata metadata, String entityId, String contextUrl,
-      String subjectName, String binding,
-      Supplier<org.opensaml.xml.security.credential.Credential> signingCredentialSupplier,
+  private static MockSamlIdp makeSamlIdp(
+      Metadata metadata,
+      String entityId,
+      String contextUrl,
+      String subjectName,
+      String binding,
+      Supplier<org.opensaml.security.credential.Credential> signingCredentialSupplier,
       String destinationOverride) {
     return new MockSamlIdp(
         SamlSharedData.make(entityId, SamlSharedData.Role.IDENTITY_PROVIDER,
@@ -202,7 +204,8 @@ public class SamlCredentialsGathererTest extends SecurityManagerTestCase {
     String cgName = credentialGroups.get(0).getName();    
     AuthnAuthority authority1 = credentialGroups.get(0).getMechanisms().get(0).getAuthority();
     AuthnAuthority authority2 = AuthnAuthority.make();
-    Credential credential = AuthnPrincipal.make("jack", cgName);
+    Credential credential =
+        AuthnPrincipal.make("jack", cgName);
     mockSamlIdp1.addVerification(authority1,
         Verification.verified(Verification.NEVER_EXPIRES, credential));
     mockSamlIdp1.addVerification(authority2,
@@ -229,11 +232,12 @@ public class SamlCredentialsGathererTest extends SecurityManagerTestCase {
     mockSamlIdp1.setCredentialGroups(credentialGroups);
     CredentialGroup cg = credentialGroups.get(0);
     AuthnMechanism mechanism = cg.getMechanisms().get(0);
-    Set<Credential> credentials
-        = ImmutableSet.<Credential>of(
+    Set<Credential> credentials =
+        ImmutableSet.<Credential>of(
             AuthnPrincipal.make("jack", cg.getName()),
-            GroupMemberships.make(ImmutableSet.of(
-            Group.make("groupA", cg.getName()), Group.make("groupB", cg.getName()))));
+            GroupMemberships.make(
+                ImmutableSet.of(
+                    Group.make("groupA", cg.getName()), Group.make("groupB", cg.getName()))));
     mockSamlIdp1.addVerification(mechanism.getAuthority(),
         Verification.verified(Verification.NEVER_EXPIRES, credentials));
 
@@ -483,24 +487,14 @@ public class SamlCredentialsGathererTest extends SecurityManagerTestCase {
     return credentialGroups;
   }
 
-  private static Function<SAMLMessageContext<AuthnRequest, Response, NameID>, ResponseGenerator>
+  private static Function<MessageContext<SAMLObject>, ResponseGenerator>
       makeSuccessResponseSupplier(final String subjectName, final DateTime expirationTime) {
-    return new Function<SAMLMessageContext<AuthnRequest, Response, NameID>, ResponseGenerator>() {
-      public ResponseGenerator apply(
-          SAMLMessageContext<AuthnRequest, Response, NameID> context) {
-        return new SuccessResponseGenerator(context, subjectName, expirationTime);
-      }
-    };
+    return context -> new SuccessResponseGenerator(context, subjectName, expirationTime);
   }
 
-  private static Function<SAMLMessageContext<AuthnRequest, Response, NameID>, ResponseGenerator>
+  private static Function<MessageContext<SAMLObject>, ResponseGenerator>
       makeFailureResponseSupplier() {
-    return new Function<SAMLMessageContext<AuthnRequest, Response, NameID>, ResponseGenerator>() {
-      public ResponseGenerator apply(
-          SAMLMessageContext<AuthnRequest, Response, NameID> context) {
-        return new FailureResponseGenerator(context, makeAuthnFailureStatus());
-      }
-    };
+    return context -> new FailureResponseGenerator(context, makeAuthnFailureStatus());
   }
 
   private static final class SuccessResponseGenerator extends SimpleResponseGenerator {
@@ -508,8 +502,8 @@ public class SamlCredentialsGathererTest extends SecurityManagerTestCase {
     protected final String subjectName;
     protected final DateTime expirationTime;
 
-    public SuccessResponseGenerator(SAMLMessageContext<AuthnRequest, Response, NameID> context,
-        String subjectName, DateTime expirationTime) {
+    public SuccessResponseGenerator(
+        MessageContext<SAMLObject> context, String subjectName, DateTime expirationTime) {
       super(context);
       this.subjectName = subjectName;
       this.expirationTime = expirationTime;

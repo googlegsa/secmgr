@@ -19,7 +19,6 @@ import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAuthnRequest;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.runEncoder;
 import static javax.servlet.http.HttpServletResponse.SC_FORBIDDEN;
 import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
-import static org.opensaml.common.xml.SAMLConstants.SAML2_REDIRECT_BINDING_URI;
 
 import com.google.enterprise.secmgr.common.GettableHttpServlet;
 import com.google.enterprise.secmgr.common.HttpUtil;
@@ -34,14 +33,16 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import org.joda.time.DateTime;
-import org.opensaml.common.SAMLObject;
-import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.saml2.binding.encoding.HTTPRedirectDeflateEncoder;
-import org.opensaml.saml2.core.AuthnRequest;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.metadata.SPSSODescriptor;
-import org.opensaml.saml2.metadata.SingleSignOnService;
-import org.opensaml.ws.transport.http.HttpServletResponseAdapter;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.saml.common.SAMLObject;
+import org.opensaml.saml.common.binding.SAMLBindingSupport;
+import org.opensaml.saml.common.messaging.context.SAMLMetadataContext;
+import org.opensaml.saml.common.messaging.context.SAMLSelfEntityContext;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.saml2.binding.encoding.impl.HTTPRedirectDeflateEncoder;
+import org.opensaml.saml.saml2.core.AuthnRequest;
+import org.opensaml.saml.saml2.metadata.SPSSODescriptor;
+import org.opensaml.saml.saml2.metadata.SingleSignOnService;
 import org.springframework.mock.web.MockServletConfig;
 
 /**
@@ -108,27 +109,32 @@ public class MockServiceProvider extends SamlServlet implements GettableHttpServ
 
   private void ifUnknown(HttpServletRequest req, HttpServletResponse resp)
       throws IOException {
-    SAMLMessageContext<SAMLObject, AuthnRequest, NameID> context = makeSamlMessageContext(req);
-    initializePeerEntity(context, Metadata.getSmEntityId(),
+    MessageContext<SAMLObject> context = makeSamlMessageContext(req);
+    initializePeerEntity(
+        context,
+        Metadata.getSmEntityId(),
         SingleSignOnService.DEFAULT_ELEMENT_NAME,
-        SAML2_REDIRECT_BINDING_URI);
+        SAMLConstants.SAML2_REDIRECT_BINDING_URI);
 
     // Generate the request
     {
-      AuthnRequest authnRequest
-          = makeAuthnRequest(context.getOutboundMessageIssuer(), new DateTime());
+      SAMLSelfEntityContext selfEntityContext =
+          context.getSubcontext(SAMLSelfEntityContext.class, true);
+      AuthnRequest authnRequest = makeAuthnRequest(selfEntityContext.getEntityId(), DateTime.now());
       authnRequest.setProviderName(GOOGLE_PROVIDER_NAME);
       authnRequest.setIsPassive(false);
-      SPSSODescriptor sp = (SPSSODescriptor) context.getLocalEntityRoleMetadata();
+      SPSSODescriptor sp =
+          (SPSSODescriptor) context.getSubcontext(SAMLMetadataContext.class).getRoleDescriptor();
       authnRequest.setAssertionConsumerServiceIndex(
           sp.getDefaultAssertionConsumerService().getIndex());
-      context.setOutboundSAMLMessage(authnRequest);
+      context.setMessage(authnRequest);
     }
-    context.setRelayState(HttpUtil.getRequestUrl(req, true).toString());
+    SAMLBindingSupport.setRelayState(context, HttpUtil.getRequestUrl(req, true).toString());
 
     // Send the request via redirect to the user agent
     initResponse(resp);
-    context.setOutboundMessageTransport(new HttpServletResponseAdapter(resp, true));
-    runEncoder(new HTTPRedirectDeflateEncoder(), context, SessionUtil.getLogDecorator(req));
+    HTTPRedirectDeflateEncoder encoder = new HTTPRedirectDeflateEncoder();
+    encoder.setHttpServletResponse(resp);
+    runEncoder(encoder, context, SessionUtil.getLogDecorator(req));
   }
 }

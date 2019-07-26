@@ -35,22 +35,19 @@ import com.google.enterprise.secmgr.modules.SamlCredentialsGatherer;
 import com.google.enterprise.secmgr.saml.SamlSharedData;
 import com.google.enterprise.util.HttpUtil;
 import com.google.inject.Singleton;
-
-import org.joda.time.DateTime;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.core.Response;
-import org.opensaml.saml2.core.StatusCode;
-import org.opensaml.xml.security.SecurityException;
-
 import java.io.IOException;
 import java.util.Set;
 import java.util.logging.Logger;
-
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
+import org.opensaml.messaging.handler.MessageHandlerException;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.saml2.core.Response;
+import org.opensaml.saml.saml2.core.StatusCode;
 
 /**
  * A servlet that implements the SAML "assertion consumer" role for SAML
@@ -106,9 +103,7 @@ public class SamlAssertionConsumer extends SamlIdpServlet
               client.decodeResponse(request, binding),
               client.getAssertionConsumerService(binding).getLocation()));
       doAuthn(session, request, response);
-    } catch (IOException e) {
-      failFromException(e, session, request, response);
-    } catch (SecurityException e) {
+    } catch (IOException | MessageHandlerException e) {
       failFromException(e, session, request, response);
     } catch (RuntimeException e) {
       if (SAMLConstants.SAML2_POST_BINDING_URI.equals(binding)) {
@@ -135,7 +130,7 @@ public class SamlAssertionConsumer extends SamlIdpServlet
     }
     String code = parser.getResponseStatus();
     logger.info(view.logMessage("status code = %s", code));
-    if (code.equals(StatusCode.SUCCESS_URI)) {
+    if (code.equals(StatusCode.SUCCESS)) {
 
       if (!parser.areAssertionsValid()) {
         logger.warning(view.logMessage("One or more SAML assertions are invalid"));
@@ -179,7 +174,7 @@ public class SamlAssertionConsumer extends SamlIdpServlet
       }
       return state;
 
-    } else if (code.equals(StatusCode.AUTHN_FAILED_URI)) {
+    } else if (code.equals(StatusCode.AUTHN_FAILED)) {
       return AuthnSessionState.of(view.getAuthority(), Verification.refuted());
     } else {
       logger.warning(view.logMessage("SAML IdP failed to resolve: %s", code));

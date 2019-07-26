@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import org.apache.http.client.HttpClient;
+import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.impl.conn.BasicClientConnectionManager;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.mockito.Mockito;
@@ -139,7 +140,7 @@ public class HttpClientAdapterTest extends SecurityManagerTestCase {
     try {
       exchange.exchange();
       fail("Normal return from URL whose listener never responds");
-    } catch (SocketTimeoutException e) {
+    } catch (SocketTimeoutException | ConnectTimeoutException e) {
       // pass
     } finally {
       exchange.close();

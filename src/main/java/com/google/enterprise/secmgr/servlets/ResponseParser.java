@@ -27,28 +27,26 @@ import com.google.enterprise.secmgr.identity.Verification;
 import com.google.enterprise.secmgr.modules.SamlAuthnClient;
 import com.google.enterprise.secmgr.saml.OpenSamlUtil;
 import com.google.enterprise.secmgr.saml.SamlLogUtil;
-
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeComparator;
-import org.joda.time.DateTimeUtils;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.Attribute;
-import org.opensaml.saml2.core.AttributeStatement;
-import org.opensaml.saml2.core.Audience;
-import org.opensaml.saml2.core.AudienceRestriction;
-import org.opensaml.saml2.core.Conditions;
-import org.opensaml.saml2.core.Issuer;
-import org.opensaml.saml2.core.NameIDType;
-import org.opensaml.saml2.core.Response;
-import org.opensaml.saml2.core.Subject;
-import org.opensaml.saml2.core.SubjectConfirmation;
-import org.opensaml.saml2.core.SubjectConfirmationData;
-import org.opensaml.xml.XMLObject;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeComparator;
+import org.joda.time.DateTimeUtils;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.saml.saml2.core.Assertion;
+import org.opensaml.saml.saml2.core.Attribute;
+import org.opensaml.saml.saml2.core.AttributeStatement;
+import org.opensaml.saml.saml2.core.Audience;
+import org.opensaml.saml.saml2.core.AudienceRestriction;
+import org.opensaml.saml.saml2.core.Conditions;
+import org.opensaml.saml.saml2.core.Issuer;
+import org.opensaml.saml.saml2.core.NameIDType;
+import org.opensaml.saml.saml2.core.Response;
+import org.opensaml.saml.saml2.core.Subject;
+import org.opensaml.saml.saml2.core.SubjectConfirmation;
+import org.opensaml.saml.saml2.core.SubjectConfirmationData;
 
 import javax.annotation.concurrent.Immutable;
 
@@ -66,7 +64,7 @@ public final class ResponseParser {
   private final String sessionId;
   private final long now;
   private final Assertion assertion;
-  
+
   private ResponseParser(SamlAuthnClient client, String recipient, Response response,
       String sessionId, long now) {
     this.client = client;

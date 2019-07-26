@@ -17,8 +17,8 @@ package com.google.enterprise.secmgr.saml;
 import com.google.enterprise.secmgr.testing.SecurityManagerTestCase;
 import java.io.File;
 import java.io.FileReader;
-import org.opensaml.xml.parse.BasicParserPool;
-import org.opensaml.xml.parse.XMLParserException;
+import net.shibboleth.utilities.java.support.xml.BasicParserPool;
+import net.shibboleth.utilities.java.support.xml.XMLParserException;
 
 /**
  * Unit tests for the {@link OpenSamlUtil} class.

@@ -31,8 +31,18 @@ public class FileUtil {
 
   private static final String TESTDATA_ROOT = FileUtil.class.getResource("/").getPath();
 
+  private static final String GOOGLE3_TEST_UTIL_CLASS = "com.google.testing.util.TestUtil";
+  private static final String GET_SRC_DIR_METHOD = "getSrcDir";
+  private static final String GET_TMP_DIR_METHOD = "getTmpDir";
+  private static final String GOOGLE3_TESTDATA_ROOT =
+      "/google3/javatests/com/google/enterprise/secmgr/testdata";
+  private static final String NON_GOOGLE3_TESTDATA_ROOT = "testdata/mocktestdata/";
+
   private static final String BEGIN_PEM_CERTIFICATE_MARKER = "-----BEGIN CERTIFICATE-----";
   private static final String END_PEM_CERTIFICATE_MARKER = "-----END CERTIFICATE-----";
+
+  private static final String BEGIN_PEM_KEY_MARKER = "-----BEGIN RSA PRIVATE KEY-----";
+  private static final String END_PEM_KEY_MARKER = "-----END RSA PRIVATE KEY-----";
 
   // don't instantiate
   private FileUtil() {
@@ -128,10 +138,11 @@ public class FileUtil {
   }
 
   /**
-   * Read a PEM-encoded certificate file and return the Base64 part as a string.
+   * Read a PEM-encoded certificate file and return the (usually Base64 encoded) inner content as
+   * a string.
    *
    * @param file The file to read.
-   * @return The certificate in Base64 encoding.
+   * @return The (text-encoded) certificate.
    * @throws IOException if unable to read or parse the file.
    */
   public static String readPEMCertificateFile(File file)
@@ -146,6 +157,29 @@ public class FileUtil {
     if (end < 0) {
       throw new IOException("Certificate file missing end marker");
     }
-    return certFile.substring(start, end - 1);
+    return certFile.substring(start, end);
+  }
+
+  /**
+   * Reads a PEM-encoded private key file and return the (usually Base64 encoded) inner content as 
+   * a string.
+   *
+   * @param file The file to read.
+   * @return The (text-encoded) private key
+   * @throws IOException if unable to read or parse the file.
+   */
+  public static String readPEMPrivateKeyFile(File file)
+      throws IOException {
+    String certFile = Files.asCharSource(file, UTF_8).read();
+    int start = certFile.indexOf(BEGIN_PEM_KEY_MARKER);
+    if (start < 0) {
+      throw new IOException("Key file missing begin marker");
+    }
+    start += BEGIN_PEM_KEY_MARKER.length();
+    int end = certFile.indexOf(END_PEM_KEY_MARKER, start);
+    if (end < 0) {
+      throw new IOException("Key file missing end marker");
+    }
+    return certFile.substring(start, end);
   }
 }

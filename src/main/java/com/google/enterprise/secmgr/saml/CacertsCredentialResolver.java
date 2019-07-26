@@ -17,16 +17,6 @@ package com.google.enterprise.secmgr.saml;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-
-import org.opensaml.xml.security.CriteriaSet;
-import org.opensaml.xml.security.SecurityException;
-import org.opensaml.xml.security.credential.AbstractCriteriaFilteringCredentialResolver;
-import org.opensaml.xml.security.credential.Credential;
-import org.opensaml.xml.security.credential.UsageType;
-import org.opensaml.xml.security.criteria.EntityIDCriteria;
-import org.opensaml.xml.security.criteria.UsageCriteria;
-import org.opensaml.xml.security.x509.BasicX509Credential;
-
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -34,10 +24,16 @@ import java.security.UnrecoverableEntryException;
 import java.security.cert.X509Certificate;
 import java.util.Enumeration;
 import java.util.logging.Logger;
-
 import javax.annotation.Nonnull;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.Immutable;
+import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
+import org.opensaml.core.criterion.EntityIdCriterion;
+import org.opensaml.security.credential.Credential;
+import org.opensaml.security.credential.UsageType;
+import org.opensaml.security.credential.impl.AbstractCriteriaFilteringCredentialResolver;
+import org.opensaml.security.criteria.UsageCriterion;
+import org.opensaml.security.x509.BasicX509Credential;
 
 /**
  * A credential resolver that produces all of the certificates in a CA
@@ -71,17 +67,16 @@ public class CacertsCredentialResolver extends AbstractCriteriaFilteringCredenti
   protected Iterable<Credential> resolveFromSource(CriteriaSet criteriaSet)
       throws SecurityException {
 
-    EntityIDCriteria entityIdCriteria = criteriaSet.get(EntityIDCriteria.class);
-    if (entityIdCriteria == null) {
+    EntityIdCriterion entityIdCriterion = criteriaSet.get(EntityIdCriterion.class);
+    if (entityIdCriterion == null) {
       logger.warning("Unable to process CA certs without entity ID.");
       return ImmutableList.of();
     }
-    String entityId = entityIdCriteria.getEntityID();
+    String entityId = entityIdCriterion.getEntityId();
 
-    UsageCriteria usageCriteria = criteriaSet.get(UsageCriteria.class);
-    UsageType usageType = (usageCriteria != null)
-        ? usageCriteria.getUsage()
-        : UsageType.UNSPECIFIED;
+    UsageCriterion usageCriterion = criteriaSet.get(UsageCriterion.class);
+    UsageType usageType =
+        (usageCriterion != null) ? usageCriterion.getUsage() : UsageType.UNSPECIFIED;
     if (!(usageType == UsageType.SIGNING || usageType == UsageType.UNSPECIFIED)) {
       logger.info("Not processing CA certs because this isn't a signing request.");
       return ImmutableList.of();
@@ -93,22 +88,17 @@ public class CacertsCredentialResolver extends AbstractCriteriaFilteringCredenti
       while (aliases.hasMoreElements()) {
         String alias = aliases.nextElement();
         if (trustStore.entryInstanceOf(alias, KeyStore.TrustedCertificateEntry.class)) {
-          BasicX509Credential credential = new BasicX509Credential();
-          credential.setEntityId(entityId);
-          credential.setUsageType(UsageType.SIGNING);
           KeyStore.TrustedCertificateEntry entry
               = (KeyStore.TrustedCertificateEntry) trustStore.getEntry(alias, null);
           X509Certificate certificate = (X509Certificate) entry.getTrustedCertificate();
-          credential.setEntityCertificate(certificate);
+          BasicX509Credential credential = new BasicX509Credential(certificate);
+          credential.setEntityId(entityId);
+          credential.setUsageType(UsageType.SIGNING);
           credential.setEntityCertificateChain(ImmutableList.of(certificate));
           builder.add(credential);
         }
       }
-    } catch (KeyStoreException e) {
-      lose(e);
-    } catch (NoSuchAlgorithmException e) {
-      lose(e);
-    } catch (UnrecoverableEntryException e) {
+    } catch (KeyStoreException | NoSuchAlgorithmException | UnrecoverableEntryException e) {
       lose(e);
     }
     return builder.build();

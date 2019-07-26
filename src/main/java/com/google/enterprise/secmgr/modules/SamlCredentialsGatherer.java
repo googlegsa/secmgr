@@ -23,7 +23,6 @@ import com.google.enterprise.secmgr.config.AuthnMechSaml;
 import com.google.enterprise.secmgr.saml.Metadata;
 import com.google.enterprise.secmgr.saml.SamlSharedData;
 import com.google.inject.Singleton;
-
 import java.io.IOException;
 
 import javax.annotation.concurrent.Immutable;
@@ -65,7 +64,7 @@ public class SamlCredentialsGatherer implements CredentialsGatherer {
         + " to service provider at Entity ID: " + mech.getEntityId());
     // Save the client for use when consuming assertion.
     element.setPrivateState(client);
-    client.sendAuthnRequest(response, view.getLogDecorator());
+    client.sendAuthnRequest(request, response, view.getLogDecorator());
     return true;
   }
 

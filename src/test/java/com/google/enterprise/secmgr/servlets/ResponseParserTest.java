@@ -24,15 +24,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import net.shibboleth.utilities.java.support.xml.BasicParserPool;
 import org.joda.time.DateTime;
-import org.opensaml.DefaultBootstrap;
-import org.opensaml.saml2.core.Conditions;
-import org.opensaml.saml2.core.Response;
-import org.opensaml.xml.Configuration;
-import org.opensaml.xml.ConfigurationException;
-import org.opensaml.xml.io.Unmarshaller;
-import org.opensaml.xml.io.UnmarshallerFactory;
-import org.opensaml.xml.parse.BasicParserPool;
+import org.opensaml.core.config.InitializationException;
+import org.opensaml.core.config.InitializationService;
+import org.opensaml.core.xml.config.XMLObjectProviderRegistrySupport;
+import org.opensaml.core.xml.io.Unmarshaller;
+import org.opensaml.core.xml.io.UnmarshallerFactory;
+import org.opensaml.saml.saml2.core.Conditions;
+import org.opensaml.saml.saml2.core.Response;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -46,18 +46,19 @@ public class ResponseParserTest extends SecurityManagerTestCase {
   private UnmarshallerFactory unmarshallerFactory;
   private BasicParserPool parser;
 
-  public ResponseParserTest() throws ConfigurationException {
-    //Since we don't use OpenSamlUtil here, we need to bootstrap OpenSaml library.
-    DefaultBootstrap.bootstrap();
+  public ResponseParserTest() throws InitializationException {
+    // Since we don't use OpenSamlUtil here, we need to bootstrap OpenSaml library.
+    InitializationService.initialize();
   }
 
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    Configuration.getMarshallerFactory();
-    unmarshallerFactory = Configuration.getUnmarshallerFactory();
+    XMLObjectProviderRegistrySupport.getMarshallerFactory();
+    unmarshallerFactory = XMLObjectProviderRegistrySupport.getUnmarshallerFactory();
     parser = new BasicParserPool();
     parser.setNamespaceAware(true);
+    parser.initialize();
   }
 
   public void testParseResponse() throws Exception {

@@ -17,15 +17,14 @@ package com.google.enterprise.secmgr.http;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.enterprise.secmgr.common.HttpUtil;
 import com.google.enterprise.secmgr.common.ProtoBufferClient;
 import com.google.protobuf.Message;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-
 import javax.annotation.Nonnull;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.Immutable;
@@ -45,20 +44,30 @@ public final class HttpProtoBufferClient<Q extends Message, R extends Message>
   private final int timeout;
   private final Supplier<? extends Message.Builder> responseBuilderFactory;
   private final Class<R> responseType;
+  private final String contentType;
 
-  private HttpProtoBufferClient(int timeout,
-      Supplier<? extends Message.Builder> responseBuilderFactory, Class<R> responseType) {
+  private HttpProtoBufferClient(
+      int timeout,
+      Supplier<? extends Message.Builder> responseBuilderFactory,
+      Class<R> responseType,
+      String contentType) {
     this.timeout = timeout;
     this.responseBuilderFactory = responseBuilderFactory;
     this.responseType = responseType;
+    this.contentType = contentType;
   }
 
   @Nonnull
-  public static <Q1 extends Message, R1 extends Message> ProtoBufferClient<Q1, R1> make(int timeout,
-      Supplier<? extends Message.Builder> responseBuilderFactory, Class<R1> responseType) {
+  public static <Q1 extends Message, R1 extends Message> ProtoBufferClient<Q1, R1> make(
+      int timeout,
+      Supplier<? extends Message.Builder> responseBuilderFactory,
+      Class<R1> responseType,
+      String contentType) {
     Preconditions.checkNotNull(responseBuilderFactory);
     Preconditions.checkNotNull(responseType);
-    return new HttpProtoBufferClient<Q1, R1>(timeout, responseBuilderFactory, responseType);
+    Preconditions.checkNotNull(contentType);
+    return new HttpProtoBufferClient<>(
+        timeout, responseBuilderFactory, responseType, contentType);
   }
 
   @Override
@@ -75,6 +84,7 @@ public final class HttpProtoBufferClient<Q extends Message, R extends Message>
     HttpExchange httpExchange = HttpClientUtil.postExchange(convertedUrl, null);
     try {
       httpExchange.setTimeout(timeout);
+      httpExchange.setRequestHeader(HttpUtil.HTTP_HEADER_CONTENT_TYPE, contentType);
       httpExchange.setRequestBody(request.toByteArray());
 
       int status = httpExchange.exchange();

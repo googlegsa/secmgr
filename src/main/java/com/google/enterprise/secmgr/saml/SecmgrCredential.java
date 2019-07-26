@@ -15,15 +15,13 @@
  */
 package com.google.enterprise.secmgr.saml;
 
-import org.opensaml.common.SAMLObject;
-
 import java.util.List;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.xml.XMLConstants;
 import javax.xml.namespace.QName;
+import org.opensaml.saml.common.SAMLObject;
 
 /**
  * A SAML extension added to AuthzDecisionQuery messages by the secmgr.

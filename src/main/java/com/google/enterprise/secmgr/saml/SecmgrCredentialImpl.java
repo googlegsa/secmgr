@@ -16,16 +16,13 @@
 package com.google.enterprise.secmgr.saml;
 
 import com.google.common.base.Preconditions;
-
-import org.opensaml.common.impl.AbstractSAMLObject;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.util.XMLObjectChildrenList;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import javax.annotation.ParametersAreNonnullByDefault;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.core.xml.util.XMLObjectChildrenList;
+import org.opensaml.saml.common.AbstractSAMLObject;
 
 /** An implementation for {@link SecmgrCredential}. */
 @ParametersAreNonnullByDefault

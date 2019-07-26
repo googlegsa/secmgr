@@ -17,13 +17,10 @@ package com.google.enterprise.secmgr.saml;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-
-import org.opensaml.common.impl.AbstractSAMLObject;
-import org.opensaml.xml.XMLObject;
-
 import java.util.List;
-
 import javax.annotation.ParametersAreNonnullByDefault;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.saml.common.AbstractSAMLObject;
 
 /** An implementation for {@link GsaAuthz}. */
 @ParametersAreNonnullByDefault
@@ -37,8 +34,8 @@ final class GsaAuthzImpl extends AbstractSAMLObject implements GsaAuthz {
 
   @Override
   public int getVersion() {
-    Preconditions.checkState(version >= MIN_VERSION && version <= MAX_VERSION,
-        "Illegal version: %d", version);
+    Preconditions.checkState(
+        version >= MIN_VERSION && version <= MAX_VERSION, "Illegal version: %s", version);
     return version;
   }
 
@@ -49,8 +46,8 @@ final class GsaAuthzImpl extends AbstractSAMLObject implements GsaAuthz {
 
   @Override
   public void setVersion(int version) {
-    Preconditions.checkArgument(version >= MIN_VERSION && version <= MAX_VERSION,
-        "Illegal version: %d", version);
+    Preconditions.checkArgument(
+        version >= MIN_VERSION && version <= MAX_VERSION, "Illegal version: %s", version);
     this.version = version;
   }
 

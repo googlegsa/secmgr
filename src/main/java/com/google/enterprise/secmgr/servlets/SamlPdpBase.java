@@ -14,8 +14,8 @@
 
 package com.google.enterprise.secmgr.servlets;
 
-import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getMandatoryIssuerRule;
-import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getXmlSignatureRule;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getCheckMandatoryIssuerHandler;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getXmlSignatureHandler;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.initializeSecurityPolicy;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAction;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeAssertion;
@@ -25,6 +25,7 @@ import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeSubject;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeSuccessfulStatus;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.runDecoder;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.runEncoder;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.runInboundMessageHandlers;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -46,42 +47,36 @@ import com.google.enterprise.secmgr.saml.Metadata;
 import com.google.enterprise.secmgr.saml.OpenSamlUtil;
 import com.google.enterprise.secmgr.saml.SamlSharedData;
 import com.google.enterprise.secmgr.saml.SecmgrCredential;
-
-import org.joda.time.DateTime;
-import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.saml2.binding.encoding.HTTPSOAP11Encoder;
-import org.opensaml.saml2.common.Extensions;
-import org.opensaml.saml2.core.Action;
-import org.opensaml.saml2.core.AuthzDecisionQuery;
-import org.opensaml.saml2.core.AuthzDecisionStatement;
-import org.opensaml.saml2.core.DecisionTypeEnumeration;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.Response;
-import org.opensaml.ws.message.encoder.MessageEncodingException;
-import org.opensaml.ws.transport.http.HTTPInTransport;
-import org.opensaml.ws.transport.http.HTTPOutTransport;
-import org.opensaml.ws.transport.http.HttpServletRequestAdapter;
-import org.opensaml.ws.transport.http.HttpServletResponseAdapter;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.security.SecurityException;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.Immutable;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.joda.time.DateTime;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.messaging.encoder.MessageEncodingException;
+import org.opensaml.messaging.handler.MessageHandlerException;
+import org.opensaml.saml.common.SAMLObject;
+import org.opensaml.saml.saml2.binding.decoding.impl.HTTPSOAP11Decoder;
+import org.opensaml.saml.saml2.binding.encoding.impl.HTTPSOAP11Encoder;
+import org.opensaml.saml.saml2.core.Action;
+import org.opensaml.saml.saml2.core.AuthzDecisionQuery;
+import org.opensaml.saml.saml2.core.AuthzDecisionStatement;
+import org.opensaml.saml.saml2.core.DecisionTypeEnumeration;
+import org.opensaml.saml.saml2.core.Extensions;
+import org.opensaml.saml.saml2.core.Response;
+import org.opensaml.soap.messaging.context.SOAP11Context;
 
 /**
- * This class implements most of the logic needed for a SAML Policy Decision
- * Point.  To make a PDP, the application provides an entity descriptor for the
- * local entity, and an abstract "authorizer" that maps resource/sessionId pairs
- * to decisions.
+ * This class implements most of the logic needed for a SAML Policy Decision Point. To make a PDP,
+ * the application provides an entity descriptor for the local entity, and an abstract "authorizer"
+ * that maps resource/sessionId pairs to decisions.
  */
 @Immutable
 @ParametersAreNonnullByDefault
@@ -168,15 +163,15 @@ public final class SamlPdpBase {
   public DecodedRequest decodeAuthzRequest(HttpServletRequest servletRequest)
       throws IOException {
     Decoder decoder = new Decoder(servletRequest);
-    SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context = decoder.decode();
+    MessageContext<SAMLObject> context = decoder.decode();
     if (context == null) {
       return decodeBatch1AuthzRequest(decoder);
     }
-    Extensions extensions = context.getInboundSAMLMessage().getExtensions();
+    Extensions extensions = ((AuthzDecisionQuery) context.getMessage()).getExtensions();
     if (extensions != null && OpenSamlUtil.getChild(extensions, GsaAuthz.class) != null) {
       return decodeBatch2AuthzRequest(decoder, context);
     }
-    SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context2 = decoder.decode();
+    MessageContext<SAMLObject> context2 = decoder.decode();
     if (context2 == null) {
       return decodeStandardAuthzRequest(decoder, context);
     }
@@ -185,8 +180,7 @@ public final class SamlPdpBase {
 
   private final class Decoder {
     final Metadata metadata;
-    final HTTPSOAP11MultiContextDecoder soapDecoder;
-    final HTTPInTransport in;
+    final HTTPSOAP11Decoder soapDecoder;
     final Decorator decorator;
     boolean violationRecorded;
 
@@ -194,25 +188,21 @@ public final class SamlPdpBase {
         throws IOException {
       metadata = Metadata.getInstance(servletRequest);
       soapDecoder = new HTTPSOAP11MultiContextDecoder(OpenSamlUtil.getBasicParserPool());
-      in = new HttpServletRequestAdapter(servletRequest);
+      soapDecoder.setHttpServletRequest(servletRequest);
       decorator = SessionUtil.getLogDecorator(servletRequest);
       violationRecorded = false;
     }
 
-    SAMLMessageContext<AuthzDecisionQuery, Response, NameID> decode()
-        throws IOException {
-      SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context
-          = sharedData.makeSamlMessageContext(metadata);
-      initializeSecurityPolicy(context,
-          getMandatoryIssuerRule(),
-          getXmlSignatureRule());
-      context.setInboundMessageTransport(in);
+    MessageContext<SAMLObject> decode() throws IOException {
+      MessageContext<SAMLObject> context = sharedData.makeSamlMessageContext(metadata);
+      initializeSecurityPolicy(context, getCheckMandatoryIssuerHandler(), getXmlSignatureHandler());
       try {
-        runDecoder(soapDecoder, context, decorator, AuthzDecisionQuery.DEFAULT_ELEMENT_NAME);
+        runDecoder(soapDecoder, context, decorator);
+        runInboundMessageHandlers(context);
       } catch (IndexOutOfBoundsException e) {
         // Normal indication that there are no more messages to decode.
         return null;
-      } catch (SecurityException e) {
+      } catch (MessageHandlerException e) {
         logger.warning(decorator.apply("Violation of security policy: " + e.getMessage()));
         violationRecorded = true;
       }
@@ -224,9 +214,9 @@ public final class SamlPdpBase {
     }
   }
 
-  private DecodedRequest decodeStandardAuthzRequest(Decoder decoder,
-      SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context) {
-    AuthzDecisionQuery authzDecisionQuery = context.getInboundSAMLMessage();
+  private DecodedRequest decodeStandardAuthzRequest(
+      Decoder decoder, MessageContext<SAMLObject> context) {
+    AuthzDecisionQuery authzDecisionQuery = (AuthzDecisionQuery) context.getMessage();
     String sessionId = authzDecisionQuery.getSubject().getNameID().getValue();
 
     SecmgrCredential cred = null;
@@ -245,22 +235,22 @@ public final class SamlPdpBase {
         decoder.anyViolationsRecorded(), null, ImmutableList.<RequestRecord>of(), null);
   }
 
-  private DecodedRequest decodeBatch1AuthzRequest(Decoder decoder,
-      SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context1,
-      SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context2)
+  private DecodedRequest decodeBatch1AuthzRequest(
+      Decoder decoder, MessageContext<SAMLObject> context1, MessageContext<SAMLObject> context2)
       throws IOException {
     ImmutableList.Builder<RequestRecord> recordsBuilder = ImmutableList.builder();
     recordsBuilder.add(decodeOneBatch1Request(context1));
     recordsBuilder.add(decodeOneBatch1Request(context2));
     while (true) {
-      SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context = decoder.decode();
+      MessageContext<SAMLObject> context = decoder.decode();
       if (context == null) {
         break;
       }
       recordsBuilder.add(decodeOneBatch1Request(context));
     }
     ImmutableList<RequestRecord> records = recordsBuilder.build();
-    AuthzDecisionQuery authzDecisionQuery = records.get(0).getContext().getInboundSAMLMessage();
+    AuthzDecisionQuery authzDecisionQuery =
+        (AuthzDecisionQuery) records.get(0).getContext().getMessage();
     String sessionId = authzDecisionQuery.getSubject().getNameID().getValue();
     SecmgrCredential cred = null;
     Extensions extensions = authzDecisionQuery.getExtensions();
@@ -271,16 +261,15 @@ public final class SamlPdpBase {
         decoder.anyViolationsRecorded(), null, records, cred);
   }
 
-  private RequestRecord decodeOneBatch1Request(
-      SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context) {
-    AuthzDecisionQuery authzDecisionQuery = context.getInboundSAMLMessage();
+  private RequestRecord decodeOneBatch1Request(MessageContext<SAMLObject> context) {
+    AuthzDecisionQuery authzDecisionQuery = (AuthzDecisionQuery) context.getMessage();
     String resourceUrl = authzDecisionQuery.getResource();
     return new RequestRecord(resourceUrl, null, context);
   }
 
-  private DecodedRequest decodeBatch2AuthzRequest(Decoder decoder,
-      SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context) {
-    AuthzDecisionQuery authzDecisionQuery = context.getInboundSAMLMessage();
+  private DecodedRequest decodeBatch2AuthzRequest(
+      Decoder decoder, MessageContext<SAMLObject> context) {
+    AuthzDecisionQuery authzDecisionQuery = (AuthzDecisionQuery) context.getMessage();
     String sessionId = authzDecisionQuery.getSubject().getNameID().getValue();
 
     Extensions extensions = authzDecisionQuery.getExtensions();
@@ -362,15 +351,16 @@ public final class SamlPdpBase {
   private void encodeStandardAuthzResponse(DecodedResponse response,
       HttpServletResponse servletResponse, Decorator decorator)
       throws IOException {
-    SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context = response.getContext();
-    context.setOutboundSAMLMessage(
+    MessageContext<SAMLObject> context = response.getContext();
+    context.setMessage(
         makeAuthzResponse(
             response.getSessionId(),
             response.getInResponseTo(),
             new DateTime(),
             response.getResponseRecords()));
-    context.setOutboundMessageTransport(new HttpServletResponseAdapter(servletResponse, true));
-    runEncoder(new HTTPSOAP11Encoder(), context, decorator);
+    HTTPSOAP11Encoder encoder = new HTTPSOAP11Encoder();
+    encoder.setHttpServletResponse(servletResponse);
+    runEncoder(encoder, context, decorator);
   }
 
   private void encodeBatch1AuthzResponse(DecodedResponse response,
@@ -378,25 +368,20 @@ public final class SamlPdpBase {
       throws IOException {
     String sessionId = response.getSessionId();
     DateTime now = new DateTime();
-    HTTPOutTransport out = new HttpServletResponseAdapter(servletResponse, true);
     HTTPSOAP11MultiContextEncoder encoder = new HTTPSOAP11MultiContextEncoder();
+    MessageContext<SAMLObject> context = response.getResponseRecords().get(0).getContext();
+    encoder.setHttpServletResponse(servletResponse);
+    encoder.setMessageContext(context);
     for (ResponseRecord record : response.getResponseRecords()) {
-      SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context = record.getContext();
-      context.setOutboundSAMLMessage(
-          makeAuthzResponse(
-              sessionId,
-              record.getInResponseTo(),
-              now,
-              ImmutableList.of(record)));
-      context.setOutboundMessageTransport(out);
+      SAMLObject message =
+          makeAuthzResponse(sessionId, record.getInResponseTo(), now, ImmutableList.of(record));
+      context.setMessage(message);
       runEncoder(encoder, context, decorator);
     }
     try {
       encoder.finish();
     } catch (MessageEncodingException e) {
-      String message = "Unable to encode authorization response: ";
-      logger.warning(decorator.apply(message + e.getMessage()));
-      throw new IOException(message, e);
+      throw new IOException(e);
     }
   }
 
@@ -410,10 +395,11 @@ public final class SamlPdpBase {
             new DateTime(),
             response.getResponseRecords());
 
-    SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context = response.getContext();
-    context.setOutboundSAMLMessage(samlResponse);
-    context.setOutboundMessageTransport(new HttpServletResponseAdapter(servletResponse, true));
-    runEncoder(new HTTPSOAP11Encoder(), context, decorator);
+    MessageContext<SAMLObject> context = response.getContext();
+    context.setMessage(samlResponse);
+    HTTPSOAP11Encoder encoder = new HTTPSOAP11Encoder();
+    encoder.setHttpServletResponse(servletResponse);
+    runEncoder(encoder, context, decorator);
   }
 
   private Response makeAuthzResponse(String sessionId, String inResponseTo, DateTime now,
@@ -448,6 +434,14 @@ public final class SamlPdpBase {
     }
   }
 
+  private static MessageContext<SAMLObject> removeSOAPContext(MessageContext<SAMLObject> context) {
+    if (context == null) {
+      return null;
+    }
+    context.removeSubcontext(SOAP11Context.class);
+    return context;
+  }
+
   /**
    * A decoded authorization request.
    */
@@ -457,14 +451,18 @@ public final class SamlPdpBase {
     @Nonnull private final String sessionId;
     @Nonnull private final GsaAuthz.Mode authzMode;
     private final boolean anySecurityViolations;
-    @Nullable private final SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context;
+    @Nullable private final MessageContext<SAMLObject> context;
     @Nonnull private final ImmutableList<RequestRecord> records;
     @Nullable private final SecmgrCredential cred;
 
-    private DecodedRequest(Protocol protocol, String sessionId, GsaAuthz.Mode authzMode,
+    private DecodedRequest(
+        Protocol protocol,
+        String sessionId,
+        GsaAuthz.Mode authzMode,
         boolean anySecurityViolations,
-        @Nullable SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context,
-        ImmutableList<RequestRecord> records, SecmgrCredential cred) {
+        @Nullable MessageContext<SAMLObject> context,
+        ImmutableList<RequestRecord> records,
+        SecmgrCredential cred) {
       Preconditions.checkNotNull(protocol);
       Preconditions.checkNotNull(sessionId);
       Preconditions.checkNotNull(authzMode);
@@ -473,7 +471,7 @@ public final class SamlPdpBase {
       this.sessionId = sessionId;
       this.authzMode = authzMode;
       this.anySecurityViolations = anySecurityViolations;
-      this.context = context;
+      this.context = removeSOAPContext(context);
       this.records = records;
       this.cred = cred;
     }
@@ -499,7 +497,7 @@ public final class SamlPdpBase {
     }
 
     @Nonnull
-    private SAMLMessageContext<AuthzDecisionQuery, Response, NameID> getContext() {
+    private MessageContext<SAMLObject> getContext() {
       Preconditions.checkNotNull(context);
       return context;
     }
@@ -529,13 +527,15 @@ public final class SamlPdpBase {
   @Immutable
   private static final class RequestRecord {
     @Nonnull private final Resource resource;
-    @Nullable private final SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context;
+    @Nullable private final MessageContext<SAMLObject> context;
 
-    RequestRecord(String url, @Nullable AuthzStatus earlyDecision, 
-        @Nullable SAMLMessageContext<AuthzDecisionQuery, Response, NameID> context) {
+    RequestRecord(
+        String url,
+        @Nullable AuthzStatus earlyDecision,
+        @Nullable MessageContext<SAMLObject> context) {
       Preconditions.checkNotNull(url);
       this.resource = new Resource(url, earlyDecision);
-      this.context = context;
+      this.context = removeSOAPContext(context);
     }
 
     @Nonnull
@@ -549,7 +549,7 @@ public final class SamlPdpBase {
     }
 
     @Nonnull
-    SAMLMessageContext<AuthzDecisionQuery, Response, NameID> getContext() {
+    MessageContext<SAMLObject> getContext() {
       Preconditions.checkNotNull(context);
       return context;
     }
@@ -581,13 +581,13 @@ public final class SamlPdpBase {
     }
 
     @Nonnull
-    private SAMLMessageContext<AuthzDecisionQuery, Response, NameID> getContext() {
+    private MessageContext<SAMLObject> getContext() {
       return request.getContext();
     }
 
     @Nonnull
     private String getInResponseTo() {
-      return getContext().getInboundSAMLMessage().getID();
+      return ((AuthzDecisionQuery) getContext().getMessage()).getID();
     }
 
     @Nonnull
@@ -614,13 +614,13 @@ public final class SamlPdpBase {
     }
 
     @Nonnull
-    private SAMLMessageContext<AuthzDecisionQuery, Response, NameID> getContext() {
+    private MessageContext<SAMLObject> getContext() {
       return request.getContext();
     }
 
     @Nonnull
     private String getInResponseTo() {
-      return getContext().getInboundSAMLMessage().getID();
+      return ((AuthzDecisionQuery) getContext().getMessage()).getID();
     }
 
     @Nonnull

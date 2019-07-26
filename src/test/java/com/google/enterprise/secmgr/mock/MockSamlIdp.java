@@ -14,12 +14,12 @@
 
 package com.google.enterprise.secmgr.mock;
 
-import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getAuthnRequestsSignedRule;
-import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getRedirectSignatureRule;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getAuthnRequestsSignedHandler;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.getRedirectSignatureHandler;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.initializeSecurityPolicy;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.makeSingleSignOnService;
 import static com.google.enterprise.secmgr.saml.OpenSamlUtil.runDecoder;
-import static org.opensaml.common.xml.SAMLConstants.SAML20P_NS;
+import static com.google.enterprise.secmgr.saml.OpenSamlUtil.runInboundMessageHandlers;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -41,21 +41,26 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import javax.annotation.Nullable;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.saml2.binding.decoding.HTTPRedirectDeflateDecoder;
-import org.opensaml.saml2.core.AuthnRequest;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.Response;
-import org.opensaml.saml2.metadata.AssertionConsumerService;
-import org.opensaml.saml2.metadata.Endpoint;
-import org.opensaml.saml2.metadata.EntityDescriptor;
-import org.opensaml.saml2.metadata.IDPSSODescriptor;
-import org.opensaml.ws.message.decoder.MessageDecodingException;
-import org.opensaml.ws.transport.http.HttpServletRequestAdapter;
-import org.opensaml.xml.security.SecurityException;
+import net.shibboleth.utilities.java.support.net.BasicURLComparator;
+import net.shibboleth.utilities.java.support.net.URIComparator;
+import net.shibboleth.utilities.java.support.net.URIException;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.messaging.handler.MessageHandlerException;
+import org.opensaml.saml.common.SAMLObject;
+import org.opensaml.saml.common.binding.security.impl.ReceivedEndpointSecurityHandler;
+import org.opensaml.saml.common.messaging.context.SAMLEndpointContext;
+import org.opensaml.saml.common.messaging.context.SAMLPeerEntityContext;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.saml2.binding.decoding.impl.HTTPRedirectDeflateDecoder;
+import org.opensaml.saml.saml2.core.Response;
+import org.opensaml.saml.saml2.metadata.AssertionConsumerService;
+import org.opensaml.saml.saml2.metadata.Endpoint;
+import org.opensaml.saml.saml2.metadata.EntityDescriptor;
+import org.opensaml.saml.saml2.metadata.IDPSSODescriptor;
 
 /**
  * A mock of a SAML "identity provider" server.
@@ -68,15 +73,18 @@ public class MockSamlIdp extends SamlIdpServlet
   private final Metadata metadata;
   private final String contextUrl;
   private final String destinationOverride;
-  private final Function<SAMLMessageContext<AuthnRequest, Response, NameID>, ResponseGenerator>
-      originalSupplier;
+  private final Function<MessageContext<SAMLObject>, ResponseGenerator> originalSupplier;
   private final List<String> requiredQueryParameters;
-  private Function<SAMLMessageContext<AuthnRequest, Response, NameID>, ResponseGenerator> supplier;
+  private Function<MessageContext<SAMLObject>, ResponseGenerator> supplier;
   private AuthnSession session;
 
-  public MockSamlIdp(SamlSharedData sharedData, String responseBinding, Metadata metadata,
-      String contextUrl, String destinationOverride,
-      Function<SAMLMessageContext<AuthnRequest, Response, NameID>, ResponseGenerator> supplier) {
+  public MockSamlIdp(
+      SamlSharedData sharedData,
+      String responseBinding,
+      Metadata metadata,
+      String contextUrl,
+      String destinationOverride,
+      Function<MessageContext<SAMLObject>, ResponseGenerator> supplier) {
     super(sharedData, responseBinding);
     this.metadata = metadata;
     this.contextUrl = contextUrl;
@@ -90,7 +98,7 @@ public class MockSamlIdp extends SamlIdpServlet
   public void addToIntegration(MockIntegration integration)
       throws IOException, ServletException {
     EntityDescriptor entity = metadata.getEntity(getLocalEntityId());
-    IDPSSODescriptor idp = entity.getIDPSSODescriptor(SAML20P_NS);
+    IDPSSODescriptor idp = entity.getIDPSSODescriptor(SAMLConstants.SAML20P_NS);
     MockHttpTransport transport = integration.getHttpTransport();
     transport.registerEntity(entity, contextUrl);
     transport.registerServlet(idp.getSingleSignOnServices().get(0), this);
@@ -120,13 +128,12 @@ public class MockSamlIdp extends SamlIdpServlet
     session = null;
   }
 
-  public Function<SAMLMessageContext<AuthnRequest, Response, NameID>, ResponseGenerator>
-      getResponseGeneratorSupplier() {
+  public Function<MessageContext<SAMLObject>, ResponseGenerator> getResponseGeneratorSupplier() {
     return supplier;
   }
 
   public void setResponseGeneratorSupplier(
-      Function<SAMLMessageContext<AuthnRequest, Response, NameID>, ResponseGenerator> supplier) {
+      Function<MessageContext<SAMLObject>, ResponseGenerator> supplier) {
     this.supplier = supplier;
   }
 
@@ -150,8 +157,8 @@ public class MockSamlIdp extends SamlIdpServlet
   }
 
   @Override
-  public void doGet(HttpServletRequest request, HttpServletResponse response)
-      throws IOException {
+  @SuppressWarnings("unchecked")
+  public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
     Decorator decorator = SessionUtil.getLogDecorator(request);
 
     // Generate 404 if one of the required query parameters is missing.
@@ -164,60 +171,65 @@ public class MockSamlIdp extends SamlIdpServlet
     }
 
     // Establish the SAML message context.
-    SAMLMessageContext<AuthnRequest, Response, NameID> context
-        = makeSamlMessageContext(metadata);
-    initializeSecurityPolicy(context,
-        getAuthnRequestsSignedRule(),
-        getRedirectSignatureRule());
+    MessageContext<SAMLObject> context = makeSamlMessageContext(metadata);
+    ReceivedEndpointSecurityHandler endpointSecurityHandler = new ReceivedEndpointSecurityHandler();
+    endpointSecurityHandler.setHttpServletRequest(request);
+    endpointSecurityHandler.setURIComparator(getURIComparator());
+    initializeSecurityPolicy(
+        context,
+        getAuthnRequestsSignedHandler(),
+        getRedirectSignatureHandler(request),
+        endpointSecurityHandler);
 
     // Decode the request.
-    context.setInboundMessageTransport(new HttpServletRequestAdapter(request));
+    HTTPRedirectDeflateDecoder decoder = new HTTPRedirectDeflateDecoder();
+    decoder.setHttpServletRequest(request);
     try {
-      runDecoder(new RedirectDecoder(), context, decorator, AuthnRequest.DEFAULT_ELEMENT_NAME);
-    } catch (IOException e) {
-      failFromException(e, session, request, response);
-      return;
-    } catch (SecurityException e) {
+      runDecoder(decoder, context, decorator);
+      initializePeerEntity(
+          context, AssertionConsumerService.DEFAULT_ELEMENT_NAME, getResponseBinding(context));
+      runInboundMessageHandlers(context);
+    } catch (IOException | MessageHandlerException e) {
       failFromException(e, session, request, response);
       return;
     }
-
-    // Select entity for response.
-    initializePeerEntity(context, AssertionConsumerService.DEFAULT_ELEMENT_NAME,
-        getResponseBinding(context));
 
     Response samlResponse = supplier.apply(context).generate(
         (session != null) ? session.getSnapshot() : null);
+    SAMLEndpointContext peerEntityEndpointContext =
+        context.getSubcontext(SAMLPeerEntityContext.class).getSubcontext(SAMLEndpointContext.class);
     if (destinationOverride != null) {
       // Force the message to be sent to a different location than the one in
       // the response message.
-      context.setPeerEntityEndpoint(
+      peerEntityEndpointContext.setEndpoint(
           makeSingleSignOnService(
-              context.getPeerEntityEndpoint().getBinding(),
-              destinationOverride));
+              peerEntityEndpointContext.getEndpoint().getBinding(), destinationOverride));
     }
-    logger.info("Response binding " + getResponseBinding(context)
-        + " Peer endpint binding" + context.getPeerEntityEndpoint().getBinding());
+    logger.info(
+        "Response binding "
+            + getResponseBinding(context)
+            + " Peer endpint binding"
+            + peerEntityEndpointContext.getEndpoint().getBinding());
     encodeResponse(decorator, response, context, samlResponse);
   }
 
-  /**
-   * A tweaked redirect decoder that ignores query parameters in the endpoint URL.
-   */
-  private final class RedirectDecoder extends HTTPRedirectDeflateDecoder {
-
-    @Override
-    protected boolean compareEndpointURIs(String messageDestination, String receiverEndpoint)
-        throws MessageDecodingException {
-      int q = messageDestination.indexOf('?');
-      if (q > 0) {
-        messageDestination = messageDestination.substring(0, q);
+  /** URI comparator that ignores query parameters in the endpoint URL. */
+  private URIComparator getURIComparator() {
+    return new URIComparator() {
+      @Override
+      public boolean compare(@Nullable String messageDestination, @Nullable String receiverEndpoint)
+          throws URIException {
+        int q = messageDestination.indexOf('?');
+        if (q > 0) {
+          messageDestination = messageDestination.substring(0, q);
+        }
+        q = receiverEndpoint.indexOf('?');
+        if (q > 0) {
+          receiverEndpoint = receiverEndpoint.substring(0, q);
+        }
+        URIComparator baseUriComparator = new BasicURLComparator();
+        return baseUriComparator.compare(messageDestination, receiverEndpoint);
       }
-      q = receiverEndpoint.indexOf('?');
-      if (q > 0) {
-        receiverEndpoint = receiverEndpoint.substring(0, q);
-      }
-      return super.compareEndpointURIs(messageDestination, receiverEndpoint);
-    }
+    };
   }
 }
