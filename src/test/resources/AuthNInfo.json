@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "timeStamp": 1315606857405,
+  "sessionState": {
+    "instructions": [
+      {
+        "operation": "ADD_CREDENTIAL",
+        "authority": "http://google.com/enterprise/gsa/security-manager/Default",
+        "operand": {
+          "name": "ruth_test1",
+          "typeName": "AuthnPrincipal"
+        }
+      },
+      {
+        "operation": "ADD_CREDENTIAL",
+        "authority": "http://google.com/enterprise/gsa/security-manager/Default",
+        "operand": {
+          "password": "test1",
+          "typeName": "CredPassword"
+        }
+      },
+      {
+        "operation": "ADD_VERIFICATION",
+        "authority": "http://google.com/enterprise/gsa/security-manager/basic",
+        "operand": {
+          "status": "VERIFIED",
+          "expirationTime": 1315608009064,
+          "credentials": [
+            {
+              "name": "ruth_test1",
+              "typeName": "AuthnPrincipal"
+            },
+            {
+              "password": "test1",
+              "typeName": "CredPassword"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "pviCredentials": {
+    "username": "ruth_test1",
+    "password": "test1",
+    "groups": []
+  },
+  "basicCredentials": {
+    "username": "ruth_test1",
+    "password": "test1",
+    "groups": []
+  },
+  "verifiedCredentials": [],
+  "cookies": []
+}

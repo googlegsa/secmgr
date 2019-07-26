@@ -1,0 +1,28 @@
+{
+  "principals": [{
+    "scope": "USER",
+    "name": "user1",
+    "nameSpace": "cg1",
+    "caseSensitive": "EVERYTHING_CASE_SENSITIVE"
+  }, {
+    "scope": "USER",
+    "name": "CRACK_CS_GET",
+    "nameSpace": "Default",
+    "caseSensitive": "EVERYTHING_CASE_SENSITIVE"
+  }, {
+    "scope": "USER",
+    "name": "USER2",
+    "nameSpace": "Default",
+    "caseSensitive": "EVERYTHING_CASE_SENSITIVE"
+  }, {
+    "scope": "GROUP",
+    "name": "moma-search-prod",
+    "nameSpace": "cg1",
+    "caseSensitive": "EVERYTHING_CASE_SENSITIVE"
+  }, {
+    "scope": "USER",
+    "name": "moma-search-prod",
+    "nameSpace": "cg1",
+    "caseSensitive": "EVERYTHING_CASE_INSENSITIVE"
+  }]
+}

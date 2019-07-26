@@ -1,0 +1,75 @@
+<?xml version="1.0" ?>
+<!DOCTYPE Response [
+<!ATTLIST samlp:Response ID ID #IMPLIED>
+]>
+<samlp:Response
+  Destination="https://entyf14.hot/security-manager/samlassertionconsumer"
+  ID="geebc4f763405b141d4faf1f9353d2230324b4bdf" IssueInstant="2014-11-26T00:02:18Z"
+  Version="2.0" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
+  xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol">
+  <saml:Issuer>authn.py</saml:Issuer>
+  <samlp:Status>
+    <samlp:StatusCode Value="urn:oasis:names:tc:SAML:2.0:status:Success" />
+  </samlp:Status>
+  <saml:Assertion ID="f642e5ca45da9a7b590b9ef4da1ba6edae8b174d8"
+    IssueInstant="2014-11-26T00:02:18Z" Version="2.0">
+    <saml:Issuer>authn.py</saml:Issuer>
+    <saml:Subject>
+      <saml:NameID>admin</saml:NameID>
+      <saml:SubjectConfirmation Method="urn:oasis:names:tc:SAML:2.0:cm:bearer">
+        <saml:SubjectConfirmationData
+          InResponseTo="_d44e32b7ba8a573acaa8f8f84df7547f" NotOnOrAfter="2014-11-26T00:03:18Z"
+          Recipient="https://entyf14.hot/security-manager/samlassertionconsumer" />
+      </saml:SubjectConfirmation>
+    </saml:Subject>
+    <saml:Conditions NotBefore="2014-11-26T00:02:18Z"
+      NotOnOrAfter="2014-11-26T00:03:18Z">
+      <saml:AudienceRestriction>
+        <saml:Audience>http://google.com/enterprise/gsa/T2-PVQRXU2FHLSJB</saml:Audience>
+      </saml:AudienceRestriction>
+    </saml:Conditions>
+    <saml:AuthnStatement AuthnInstant="2014-11-26T00:02:18Z"
+      SessionIndex="f642e5ca45da9a7b590b9ef4da1ba6edae8b174d8">
+      <saml:AuthnContext>
+        <saml:AuthnContextClassRef>urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport</saml:AuthnContextClassRef>
+      </saml:AuthnContext>
+    </saml:AuthnStatement>
+  </saml:Assertion>
+  <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+    <ds:SignedInfo>
+      <ds:CanonicalizationMethod
+        Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" />
+      <ds:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1" />
+      <ds:Reference URI="#geebc4f763405b141d4faf1f9353d2230324b4bdf">
+        <ds:Transforms>
+          <ds:Transform
+            Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" />
+        </ds:Transforms>
+        <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
+        <ds:DigestValue>8lBjDfGrpIduZNYWeVx9tDi1nIo=</ds:DigestValue>
+      </ds:Reference>
+    </ds:SignedInfo>
+    <ds:SignatureValue>iEmU6OIykSvbwRqng536gFm99RCKmdKi5hQkIlAVdsZvRyOtm8M84Bs0fEz8vDmD
+      TDpZBnuwqtFAYU1TRBo/ZlJT4YPs/Fi4ndAiSbc3s9hmDEw2zQef0ABiZ2kM3qLx
+      nhrmwhr9ugQbFiRPDTa77FJTr89L98674cm3pBRDqxU=</ds:SignatureValue>
+    <ds:KeyInfo>
+      <ds:X509Data>
+        <ds:X509Certificate>MIICdDCCAd2gAwIBAgIJAM1waOO0jGjeMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNV
+          BAYTAlVTMQswCQYDVQQIDAJDQTETMBEGA1UECgwKR29vZ2xlLmNvbTEMMAoGA1UE
+          CwwDR1NBMRQwEgYDVQQDDAt0ZXN0LXNlcnZlcjAeFw0xNDExMjQyMjEwMTBaFw0y
+          NDExMjEyMjEwMTBaMFMxCzAJBgNVBAYTAlVTMQswCQYDVQQIDAJDQTETMBEGA1UE
+          CgwKR29vZ2xlLmNvbTEMMAoGA1UECwwDR1NBMRQwEgYDVQQDDAt0ZXN0LXNlcnZl
+          cjCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEA9Y4EvouLKp+U9nPw+VGGJmwg
+          7ZqDVa+Fu9+vGWLF5B8EBEybM6VQblJJA29nuKVZ6zAAzltHlTt8fF38VhqqSNT/
+          c2xPLpah/tm5i7c2jec6fyTnVXQM/jjGgH6pVWtwdi1iGOuS1RZ2uKHRZCO3eCwp
+          TD+V4u0YJ5+nCNZBx4cCAwEAAaNQME4wHQYDVR0OBBYEFGVstcwuuqtKqlziTkYS
+          95BffNamMB8GA1UdIwQYMBaAFGVstcwuuqtKqlziTkYS95BffNamMAwGA1UdEwQF
+          MAMBAf8wDQYJKoZIhvcNAQELBQADgYEAuEUabzRjpHoYzrIc6ibc3RsaUJDGZsu9
+          2oYPeDeCOjTR4zry9rDUqGocxgGmPjb6Mrb53x8nqih8I+S+DzDvClvhGbLdN5m2
+          r9RugFehef7jLAlttvoqioko2Yy+1ayR+oJe3mrB/nfMpdlFUvz0m/4+Nln6KDLu
+          XhPwBUh2PLI=</ds:X509Certificate>
+      </ds:X509Data>
+    </ds:KeyInfo>
+  </ds:Signature>
+</samlp:Response>
+

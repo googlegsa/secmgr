@@ -26,15 +26,15 @@ import com.google.enterprise.secmgr.authncontroller.SessionView;
 import com.google.enterprise.secmgr.common.SecurityManagerUtil;
 
 import org.joda.time.DateTime;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.Attribute;
-import org.opensaml.saml2.core.AttributeStatement;
-import org.opensaml.saml2.core.AuthnContext;
-import org.opensaml.saml2.core.AuthnStatement;
-import org.opensaml.saml2.core.Conditions;
-import org.opensaml.saml2.core.Response;
-import org.opensaml.saml2.core.Subject;
-import org.opensaml.saml2.core.SubjectConfirmation;
+import org.opensaml.saml.saml2.core.Assertion;
+import org.opensaml.saml.saml2.core.Attribute;
+import org.opensaml.saml.saml2.core.AttributeStatement;
+import org.opensaml.saml.saml2.core.AuthnContext;
+import org.opensaml.saml.saml2.core.AuthnStatement;
+import org.opensaml.saml.saml2.core.Conditions;
+import org.opensaml.saml.saml2.core.Response;
+import org.opensaml.saml.saml2.core.Subject;
+import org.opensaml.saml.saml2.core.SubjectConfirmation;
 
 /**
  * This class is a mechanism for building a SAML Response message for the

@@ -20,8 +20,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
 /**
  * Utilities for finding files.
@@ -30,6 +28,8 @@ public class FileUtil {
 
   private static String contextDirectory;
   private static String commonDirectory;
+
+  private static final String TESTDATA_ROOT = FileUtil.class.getResource("/").getPath();
 
   private static final String GOOGLE3_TEST_UTIL_CLASS = "com.google.testing.util.TestUtil";
   private static final String GET_SRC_DIR_METHOD = "getSrcDir";
@@ -41,47 +41,19 @@ public class FileUtil {
   private static final String BEGIN_PEM_CERTIFICATE_MARKER = "-----BEGIN CERTIFICATE-----";
   private static final String END_PEM_CERTIFICATE_MARKER = "-----END CERTIFICATE-----";
 
+  private static final String BEGIN_PEM_KEY_MARKER = "-----BEGIN RSA PRIVATE KEY-----";
+  private static final String END_PEM_KEY_MARKER = "-----END RSA PRIVATE KEY-----";
+
   // don't instantiate
   private FileUtil() {
   }
 
   /**
-   * Initialize the context and common directories for testing.  Chooses appropriate
-   * values for them depending on the testing context.
+   * Initialize the context and common directories for testing.
    */
   public static void initializeTestDirectories() {
-    Class<?> clazz;
-    try {
-      clazz = Class.forName(GOOGLE3_TEST_UTIL_CLASS);
-    } catch (ClassNotFoundException e) {
-      // no worries -- this just means we're not in a google3 environment
-      contextDirectory = NON_GOOGLE3_TESTDATA_ROOT;
-      commonDirectory = NON_GOOGLE3_TESTDATA_ROOT;
-      return;
-    }
-
-    Method m1;
-    Method m2;
-    try {
-      m1 = clazz.getDeclaredMethod(GET_SRC_DIR_METHOD);
-      m2 = clazz.getDeclaredMethod(GET_TMP_DIR_METHOD);
-    } catch (NoSuchMethodException e) {
-      throw new IllegalStateException(e);
-    }
-
-    String srcDir;
-    String tmpDir;
-    try {
-      srcDir = String.class.cast(m1.invoke(null));
-      tmpDir = String.class.cast(m2.invoke(null));
-    } catch (IllegalAccessException e) {
-      throw new IllegalStateException(e);
-    } catch (InvocationTargetException e) {
-      throw new IllegalStateException(e);
-    }
-
-    contextDirectory = srcDir + GOOGLE3_TESTDATA_ROOT;
-    commonDirectory = tmpDir;
+    contextDirectory = TESTDATA_ROOT;
+    commonDirectory = TESTDATA_ROOT;
   }
 
   /**
@@ -166,10 +138,11 @@ public class FileUtil {
   }
 
   /**
-   * Read a PEM-encoded certificate file and return the Base64 part as a string.
+   * Read a PEM-encoded certificate file and return the (usually Base64 encoded) inner content as
+   * a string.
    *
    * @param file The file to read.
-   * @return The certificate in Base64 encoding.
+   * @return The (text-encoded) certificate.
    * @throws IOException if unable to read or parse the file.
    */
   public static String readPEMCertificateFile(File file)
@@ -184,6 +157,29 @@ public class FileUtil {
     if (end < 0) {
       throw new IOException("Certificate file missing end marker");
     }
-    return certFile.substring(start, end - 1);
+    return certFile.substring(start, end);
+  }
+
+  /**
+   * Reads a PEM-encoded private key file and return the (usually Base64 encoded) inner content as 
+   * a string.
+   *
+   * @param file The file to read.
+   * @return The (text-encoded) private key
+   * @throws IOException if unable to read or parse the file.
+   */
+  public static String readPEMPrivateKeyFile(File file)
+      throws IOException {
+    String certFile = Files.asCharSource(file, UTF_8).read();
+    int start = certFile.indexOf(BEGIN_PEM_KEY_MARKER);
+    if (start < 0) {
+      throw new IOException("Key file missing begin marker");
+    }
+    start += BEGIN_PEM_KEY_MARKER.length();
+    int end = certFile.indexOf(END_PEM_KEY_MARKER, start);
+    if (end < 0) {
+      throw new IOException("Key file missing end marker");
+    }
+    return certFile.substring(start, end);
   }
 }

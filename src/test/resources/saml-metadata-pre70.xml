@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<EntitiesDescriptor
+   xmlns="urn:oasis:names:tc:SAML:2.0:metadata"
+   xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+   cacheDuration="PT1H"><!-- one hour -->
+
+  <!-- Description of the Mock GSA -->
+  <EntityDescriptor
+     entityID="http://google.com/enterprise/gsa/${ENT_CONFIG_NAME}"
+     ID="GSA">
+
+    <SPSSODescriptor
+        protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+      <AssertionConsumerService
+          index="0"
+          isDefault="true"
+          Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact"
+          Location="http://$$GSA$$:1234/gsa/mockartifactconsumer"
+          />
+    </SPSSODescriptor>
+
+    <Organization>
+      <OrganizationName>google.com</OrganizationName>
+      <OrganizationDisplayName>Google Inc.</OrganizationDisplayName>
+      <OrganizationURL>http://www.google.com/</OrganizationURL>
+    </Organization>
+
+  </EntityDescriptor>
+
+  <!-- Description of the Security Manager -->
+  <EntityDescriptor
+     entityID="http://google.com/enterprise/gsa/${ENT_CONFIG_NAME}/security-manager"
+     ID="security-manager">
+
+    <IDPSSODescriptor
+        protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+      <SingleSignOnService
+          Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+          Location="http://$$GSA$$:8973/security-manager/samlauthn"
+          />
+      <ArtifactResolutionService
+          index="0"
+          isDefault="true"
+          Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP"
+          Location="http://localhost:8973/security-manager/samlartifact"
+          />
+      <KeyDescriptor use="signing">
+        <ds:KeyInfo>
+          <ds:X509Data>
+            <ds:X509Certificate>
+              MIICgzCCAewCCQDUuAdhbSaatTANBgkqhkiG9w0BAQUFADCBhTELMAkGA1UEBhMC
+              VVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDU1vdW50YWluIFZpZXcx
+              FDASBgNVBAoTC0dvb2dsZSBJbmMuMRAwDgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZI
+              hvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5jb20wHhcNMDkwNzE3MjI0MjA2WhcNMjAw
+              NjI5MjI0MjA2WjCBhTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWEx
+              FjAUBgNVBAcTDU1vdW50YWluIFZpZXcxFDASBgNVBAoTC0dvb2dsZSBJbmMuMRAw
+              DgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZIhvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5j
+              b20wgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAMQznMNOcp6KbMPh/6c1vUIK
+              Sn3AI/67NZpYmMBsPPOEzclWIqJoMaILgprqFLrPgQ9awgNNZfESfrSVBFkbBLb6
+              oqN/ENhsPSLCxc/BMxUjvTt+1kf2Gj5L6GxD2hYmDe5BTOpPdLrmPtle6Qwjgg1Q
+              OxJrTh0miQE09VaxQ+aBAgMBAAEwDQYJKoZIhvcNAQEFBQADgYEAL8DfTFTSIKET
+              HQUaOHhWISuWlkdY1u6+bSZE+KpAsr8iLJaHG0kmVY3XYpcPz9hIYtfHfwHKzjW8
+              Ke8mt2opb/Zr0hWo5YolbmTsGlsjW+FtXPSmlvjVGw5YTBYm8FZNfmvwu2tf0PMW
+              VkXixPVdBtjqLhsOurX+8kVKcho4uMQ=
+            </ds:X509Certificate>
+          </ds:X509Data>
+        </ds:KeyInfo>
+      </KeyDescriptor>
+    </IDPSSODescriptor>
+
+    <SPSSODescriptor
+        protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"
+        AuthnRequestsSigned="true">
+      <AssertionConsumerService
+          index="0"
+          isDefault="true"
+          Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+          Location="http://$$GSA$$:8973/security-manager/assertionconsumer"
+          />
+      <AssertionConsumerService
+          index="1"
+          isDefault="false"
+          Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Artifact"
+          Location="http://$$GSA$$:8973/security-manager/assertionconsumer"
+          />
+      <KeyDescriptor use="signing">
+        <ds:KeyInfo>
+          <ds:X509Data>
+            <ds:X509Certificate>
+              MIICgzCCAewCCQDUuAdhbSaatTANBgkqhkiG9w0BAQUFADCBhTELMAkGA1UEBhMC
+              VVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDU1vdW50YWluIFZpZXcx
+              FDASBgNVBAoTC0dvb2dsZSBJbmMuMRAwDgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZI
+              hvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5jb20wHhcNMDkwNzE3MjI0MjA2WhcNMjAw
+              NjI5MjI0MjA2WjCBhTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWEx
+              FjAUBgNVBAcTDU1vdW50YWluIFZpZXcxFDASBgNVBAoTC0dvb2dsZSBJbmMuMRAw
+              DgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZIhvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5j
+              b20wgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAMQznMNOcp6KbMPh/6c1vUIK
+              Sn3AI/67NZpYmMBsPPOEzclWIqJoMaILgprqFLrPgQ9awgNNZfESfrSVBFkbBLb6
+              oqN/ENhsPSLCxc/BMxUjvTt+1kf2Gj5L6GxD2hYmDe5BTOpPdLrmPtle6Qwjgg1Q
+              OxJrTh0miQE09VaxQ+aBAgMBAAEwDQYJKoZIhvcNAQEFBQADgYEAL8DfTFTSIKET
+              HQUaOHhWISuWlkdY1u6+bSZE+KpAsr8iLJaHG0kmVY3XYpcPz9hIYtfHfwHKzjW8
+              Ke8mt2opb/Zr0hWo5YolbmTsGlsjW+FtXPSmlvjVGw5YTBYm8FZNfmvwu2tf0PMW
+              VkXixPVdBtjqLhsOurX+8kVKcho4uMQ=
+            </ds:X509Certificate>
+          </ds:X509Data>
+        </ds:KeyInfo>
+      </KeyDescriptor>
+    </SPSSODescriptor>
+
+    <PDPDescriptor
+        protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+      <AuthzService
+          Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP"
+          Location="http://localhost:8973/security-manager/samlauthz"
+          />
+      <KeyDescriptor use="signing">
+        <ds:KeyInfo>
+          <ds:X509Data>
+            <ds:X509Certificate>
+              MIICgzCCAewCCQDUuAdhbSaatTANBgkqhkiG9w0BAQUFADCBhTELMAkGA1UEBhMC
+              VVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDU1vdW50YWluIFZpZXcx
+              FDASBgNVBAoTC0dvb2dsZSBJbmMuMRAwDgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZI
+              hvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5jb20wHhcNMDkwNzE3MjI0MjA2WhcNMjAw
+              NjI5MjI0MjA2WjCBhTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWEx
+              FjAUBgNVBAcTDU1vdW50YWluIFZpZXcxFDASBgNVBAoTC0dvb2dsZSBJbmMuMRAw
+              DgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZIhvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5j
+              b20wgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAMQznMNOcp6KbMPh/6c1vUIK
+              Sn3AI/67NZpYmMBsPPOEzclWIqJoMaILgprqFLrPgQ9awgNNZfESfrSVBFkbBLb6
+              oqN/ENhsPSLCxc/BMxUjvTt+1kf2Gj5L6GxD2hYmDe5BTOpPdLrmPtle6Qwjgg1Q
+              OxJrTh0miQE09VaxQ+aBAgMBAAEwDQYJKoZIhvcNAQEFBQADgYEAL8DfTFTSIKET
+              HQUaOHhWISuWlkdY1u6+bSZE+KpAsr8iLJaHG0kmVY3XYpcPz9hIYtfHfwHKzjW8
+              Ke8mt2opb/Zr0hWo5YolbmTsGlsjW+FtXPSmlvjVGw5YTBYm8FZNfmvwu2tf0PMW
+              VkXixPVdBtjqLhsOurX+8kVKcho4uMQ=
+            </ds:X509Certificate>
+          </ds:X509Data>
+        </ds:KeyInfo>
+      </KeyDescriptor>
+    </PDPDescriptor>
+
+    <Organization>
+      <OrganizationName>google.com</OrganizationName>
+      <OrganizationDisplayName>Google Inc.</OrganizationDisplayName>
+      <OrganizationURL>http://www.google.com/</OrganizationURL>
+    </Organization>
+
+  </EntityDescriptor>
+
+  <!-- Description of the Mock SAML IdPs -->
+  <EntitiesDescriptor Name="security-manager-clients">
+
+    <!-- a mock that responds via artifact binding -->
+    <EntityDescriptor
+        entityID="http://example.com/saml-idp-1">
+
+      <IDPSSODescriptor
+          protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+        <SingleSignOnService
+            Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+            Location="http://saml.example.com/mocksamlidp1"
+            />
+        <ArtifactResolutionService
+            index="0"
+            isDefault="true"
+            Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP"
+            Location="http://saml.example.com/mocksamlartifact1"
+            />
+      </IDPSSODescriptor>
+
+    </EntityDescriptor>
+
+    <!-- a mock that responds via POST binding -->
+    <EntityDescriptor
+        entityID="http://foobar.org/saml-idp-2">
+
+      <IDPSSODescriptor
+          protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+        <SingleSignOnService
+            Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+            Location="http://saml.foobar.org/mocksamlidp2?OpenForm"
+            />
+        <KeyDescriptor use="signing">
+          <ds:KeyInfo>
+            <ds:X509Data>
+              <ds:X509Certificate>
+                MIICgzCCAewCCQDQ0M8M9aSr2DANBgkqhkiG9w0BAQUFADCBhTELMAkGA1UEBhMC
+                VVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDU1vdW50YWluIFZpZXcx
+                FDASBgNVBAoTC0dvb2dsZSBJbmMuMRAwDgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZI
+                hvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5jb20wHhcNMDkwNjI0MDAwNDQyWhcNMjAw
+                NjA2MDAwNDQyWjCBhTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWEx
+                FjAUBgNVBAcTDU1vdW50YWluIFZpZXcxFDASBgNVBAoTC0dvb2dsZSBJbmMuMRAw
+                DgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZIhvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5j
+                b20wgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALw6BfZYsh51HJZ9JsKSRrmf
+                qlS4ZyFf527xU66bcPvstAzfnip0/i1e3TSFFuhJUg9a+oiZuNCVQ5JXskw7KVV4
+                3D181g6ZA/h4PkKeTRX/s9ob66LN/rAm5kQTpMBNk1vLPW0MA4d2+1BSZnJZz2Yy
+                LIyV+JNIptLt+QFNWMeHAgMBAAEwDQYJKoZIhvcNAQEFBQADgYEAjtKtJo+OMR9L
+                zhTzvD7ZJ+EEB3oq8tJlVwlxfxBchoCSbPjAjYKYYnBh0BfgrRo18YJCvDAaMpNc
+                rkEtYnu66rcIlyovJbEWUvDck1YTVJ7SwWySCLGt+Jg0If+bPdg4nOwe9FevvMju
+                reVCKg68F9yiZycNtIsZgD1eClf4Wmg=
+              </ds:X509Certificate>
+            </ds:X509Data>
+          </ds:KeyInfo>
+        </KeyDescriptor>
+      </IDPSSODescriptor>
+
+    </EntityDescriptor>
+
+    <!-- another mock that responds via POST binding, with a different signing certificate -->
+    <EntityDescriptor
+        entityID="http://foobaz.org/saml-idp-3">
+
+      <IDPSSODescriptor
+          protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+        <SingleSignOnService
+            Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+            Location="http://saml.foobaz.org/mocksamlidp3"
+            />
+        <KeyDescriptor use="signing">
+          <ds:KeyInfo>
+            <ds:X509Data>
+              <ds:X509Certificate>
+                MIICgzCCAewCCQDYsJ3sesouOzANBgkqhkiG9w0BAQUFADCBhTELMAkGA1UEBhMC
+                VVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDU1vdW50YWluIFZpZXcx
+                FDASBgNVBAoTC0dvb2dsZSBJbmMuMRAwDgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZI
+                hvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5jb20wHhcNMDkxMDE3MDAwMjMzWhcNMjAw
+                OTI5MDAwMjMzWjCBhTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWEx
+                FjAUBgNVBAcTDU1vdW50YWluIFZpZXcxFDASBgNVBAoTC0dvb2dsZSBJbmMuMRAw
+                DgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZIhvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5j
+                b20wgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAMI4ksMVhfauTHTnnub9Dx1H
+                r04VFOPJ+gMAiXtQlk3Dg4bNIUgOfc1WYCU+E49A2pZghsnZSHjYVPx6gHCnxRVO
+                9RCBQcCWIB2Q2fNe729YMo4Cnyd+J52bopGspCSeFOIUi/P8wm4s0k7C/gZ2mtJA
+                slErU/3bxodmxeXmZnzdAgMBAAEwDQYJKoZIhvcNAQEFBQADgYEAbIuDkxs/UICH
+                +xSRPtDg6vx1N56TAehI+/+y4k+3szuT/RW82UAiqrUI4fW/QBWEo/WGS1ag5KYr
+                ahYyDII6SnRNcP4K+Ef1Eeh7F5P1nFUnFPIuYgSvETJEIom/BOx1CA5GEe1dv3E4
+                FqVnuRAU7xttM78utiZncB8ZIHjQY08=
+              </ds:X509Certificate>
+            </ds:X509Data>
+          </ds:KeyInfo>
+        </KeyDescriptor>
+      </IDPSSODescriptor>
+
+    </EntityDescriptor>
+
+    <!-- another mock that responds via POST binding, with no signature -->
+    <EntityDescriptor
+        entityID="http://mumble.com/saml-idp-4">
+
+      <IDPSSODescriptor
+          protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+        <SingleSignOnService
+            Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+            Location="http://saml.mumble.com/mocksamlidp4"
+            />
+        <KeyDescriptor use="signing">
+          <ds:KeyInfo>
+            <ds:X509Data>
+              <ds:X509Certificate>
+                MIICgzCCAewCCQDYsJ3sesouOzANBgkqhkiG9w0BAQUFADCBhTELMAkGA1UEBhMC
+                VVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDU1vdW50YWluIFZpZXcx
+                FDASBgNVBAoTC0dvb2dsZSBJbmMuMRAwDgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZI
+                hvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5jb20wHhcNMDkxMDE3MDAwMjMzWhcNMjAw
+                OTI5MDAwMjMzWjCBhTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWEx
+                FjAUBgNVBAcTDU1vdW50YWluIFZpZXcxFDASBgNVBAoTC0dvb2dsZSBJbmMuMRAw
+                DgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZIhvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5j
+                b20wgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAMI4ksMVhfauTHTnnub9Dx1H
+                r04VFOPJ+gMAiXtQlk3Dg4bNIUgOfc1WYCU+E49A2pZghsnZSHjYVPx6gHCnxRVO
+                9RCBQcCWIB2Q2fNe729YMo4Cnyd+J52bopGspCSeFOIUi/P8wm4s0k7C/gZ2mtJA
+                slErU/3bxodmxeXmZnzdAgMBAAEwDQYJKoZIhvcNAQEFBQADgYEAbIuDkxs/UICH
+                +xSRPtDg6vx1N56TAehI+/+y4k+3szuT/RW82UAiqrUI4fW/QBWEo/WGS1ag5KYr
+                ahYyDII6SnRNcP4K+Ef1Eeh7F5P1nFUnFPIuYgSvETJEIom/BOx1CA5GEe1dv3E4
+                FqVnuRAU7xttM78utiZncB8ZIHjQY08=
+              </ds:X509Certificate>
+            </ds:X509Data>
+          </ds:KeyInfo>
+        </KeyDescriptor>
+      </IDPSSODescriptor>
+
+    </EntityDescriptor>
+
+    <!-- another mock that responds via POST binding, with no certificate -->
+    <EntityDescriptor
+        entityID="http://frotz.com/saml-idp-5">
+
+      <IDPSSODescriptor
+          protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+        <SingleSignOnService
+            Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+            Location="http://saml.frotz.org/mocksamlidp5"
+            />
+      </IDPSSODescriptor>
+
+    </EntityDescriptor>
+
+    <!-- another mock that responds via POST binding -->
+    <EntityDescriptor
+        entityID="http://frotz.net/saml-idp-6">
+
+      <IDPSSODescriptor
+          protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+        <SingleSignOnService
+            Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+            Location="http://saml.frotz.net/mocksamlidp6"
+            />
+        <KeyDescriptor use="signing">
+          <ds:KeyInfo>
+            <ds:X509Data>
+              <ds:X509Certificate>
+                MIICgzCCAewCCQDQ0M8M9aSr2DANBgkqhkiG9w0BAQUFADCBhTELMAkGA1UEBhMC
+                VVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDU1vdW50YWluIFZpZXcx
+                FDASBgNVBAoTC0dvb2dsZSBJbmMuMRAwDgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZI
+                hvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5jb20wHhcNMDkwNjI0MDAwNDQyWhcNMjAw
+                NjA2MDAwNDQyWjCBhTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWEx
+                FjAUBgNVBAcTDU1vdW50YWluIFZpZXcxFDASBgNVBAoTC0dvb2dsZSBJbmMuMRAw
+                DgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZIhvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5j
+                b20wgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALw6BfZYsh51HJZ9JsKSRrmf
+                qlS4ZyFf527xU66bcPvstAzfnip0/i1e3TSFFuhJUg9a+oiZuNCVQ5JXskw7KVV4
+                3D181g6ZA/h4PkKeTRX/s9ob66LN/rAm5kQTpMBNk1vLPW0MA4d2+1BSZnJZz2Yy
+                LIyV+JNIptLt+QFNWMeHAgMBAAEwDQYJKoZIhvcNAQEFBQADgYEAjtKtJo+OMR9L
+                zhTzvD7ZJ+EEB3oq8tJlVwlxfxBchoCSbPjAjYKYYnBh0BfgrRo18YJCvDAaMpNc
+                rkEtYnu66rcIlyovJbEWUvDck1YTVJ7SwWySCLGt+Jg0If+bPdg4nOwe9FevvMju
+                reVCKg68F9yiZycNtIsZgD1eClf4Wmg=
+              </ds:X509Certificate>
+            </ds:X509Data>
+          </ds:KeyInfo>
+        </KeyDescriptor>
+      </IDPSSODescriptor>
+
+    </EntityDescriptor>
+
+    <!-- a mock that responds via artifact binding using signatures -->
+    <EntityDescriptor
+        entityID="http://example.com/saml-idp-7">
+
+      <IDPSSODescriptor
+          protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+        <SingleSignOnService
+            Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+            Location="http://saml.example.com/mocksamlidp7"
+            />
+        <ArtifactResolutionService
+            index="0"
+            isDefault="true"
+            Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP"
+            Location="http://saml.example.com/mocksamlartifact7"
+            />
+        <KeyDescriptor use="signing">
+          <ds:KeyInfo>
+            <ds:X509Data>
+              <ds:X509Certificate>
+                MIICgzCCAewCCQDQ0M8M9aSr2DANBgkqhkiG9w0BAQUFADCBhTELMAkGA1UEBhMC
+                VVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcTDU1vdW50YWluIFZpZXcx
+                FDASBgNVBAoTC0dvb2dsZSBJbmMuMRAwDgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZI
+                hvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5jb20wHhcNMDkwNjI0MDAwNDQyWhcNMjAw
+                NjA2MDAwNDQyWjCBhTELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWEx
+                FjAUBgNVBAcTDU1vdW50YWluIFZpZXcxFDASBgNVBAoTC0dvb2dsZSBJbmMuMRAw
+                DgYDVQQDEwdUZXN0IE1lMSEwHwYJKoZIhvcNAQkBFhJ0ZXN0bWVAZXhhbXBsZS5j
+                b20wgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBALw6BfZYsh51HJZ9JsKSRrmf
+                qlS4ZyFf527xU66bcPvstAzfnip0/i1e3TSFFuhJUg9a+oiZuNCVQ5JXskw7KVV4
+                3D181g6ZA/h4PkKeTRX/s9ob66LN/rAm5kQTpMBNk1vLPW0MA4d2+1BSZnJZz2Yy
+                LIyV+JNIptLt+QFNWMeHAgMBAAEwDQYJKoZIhvcNAQEFBQADgYEAjtKtJo+OMR9L
+                zhTzvD7ZJ+EEB3oq8tJlVwlxfxBchoCSbPjAjYKYYnBh0BfgrRo18YJCvDAaMpNc
+                rkEtYnu66rcIlyovJbEWUvDck1YTVJ7SwWySCLGt+Jg0If+bPdg4nOwe9FevvMju
+                reVCKg68F9yiZycNtIsZgD1eClf4Wmg=
+              </ds:X509Certificate>
+            </ds:X509Data>
+          </ds:KeyInfo>
+        </KeyDescriptor>
+      </IDPSSODescriptor>
+
+    </EntityDescriptor>
+
+    <!-- A mock for authorization -->
+    <EntityDescriptor entityID="http://example.com/saml-pdp-1">
+      <PDPDescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+        <AuthzService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP"
+                      Location="http://example.com/saml-pdp-1/authz"/>
+      </PDPDescriptor>
+    </EntityDescriptor>
+
+    <!-- Another mock for authorization -->
+    <EntityDescriptor entityID="http://example.com/saml-pdp-2">
+      <PDPDescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+        <AuthzService Binding="urn:oasis:names:tc:SAML:2.0:bindings:SOAP"
+                      Location="http://example.com/saml-pdp-2/authz"/>
+      </PDPDescriptor>
+    </EntityDescriptor>
+
+  </EntitiesDescriptor>
+
+</EntitiesDescriptor>

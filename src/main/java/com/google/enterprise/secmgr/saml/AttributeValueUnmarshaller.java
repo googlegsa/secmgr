@@ -14,8 +14,8 @@
 
 package com.google.enterprise.secmgr.saml;
 
-import org.opensaml.common.impl.AbstractSAMLObjectUnmarshaller;
-import org.opensaml.xml.XMLObject;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.saml.common.AbstractSAMLObjectUnmarshaller;
 
 // This class should be part of OpenSAML but is missing from there.
 public class AttributeValueUnmarshaller extends AbstractSAMLObjectUnmarshaller {

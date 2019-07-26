@@ -15,9 +15,9 @@
  */
 package com.google.enterprise.secmgr.saml;
 
-import org.opensaml.common.impl.AbstractSAMLObjectMarshaller;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.util.XMLHelper;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.core.xml.util.XMLObjectSupport;
+import org.opensaml.saml.common.AbstractSAMLObjectMarshaller;
 import org.w3c.dom.Element;
 
 /** A marshaller (object to XML converter) for {@link Resource}. */
@@ -25,14 +25,15 @@ final class ResourceMarshaller extends AbstractSAMLObjectMarshaller {
   @Override
   protected void marshallAttributes(XMLObject xmlObject, Element domElement) {
     Resource object = (Resource) xmlObject;
-    XMLHelper.marshallAttribute(Resource.URI_ATTRIB_NAME, object.getUri().toString(),
-        domElement, false);
+    XMLObjectSupport.marshallAttribute(
+        Resource.URI_ATTRIB_NAME, object.getUri().toString(), domElement, false);
     if (object.getDecision() != null) {
-      XMLHelper.marshallAttribute(Resource.DECISION_ATTRIB_NAME, object.getDecision().toString(),
-          domElement, false);
+      XMLObjectSupport.marshallAttribute(
+          Resource.DECISION_ATTRIB_NAME, object.getDecision().toString(), domElement, false);
     }
     if (object.getAcl() != null) {
-      XMLHelper.marshallAttribute(Resource.ACL_ATTRIB_NAME, object.getAcl(), domElement, false);
+      XMLObjectSupport.marshallAttribute(
+          Resource.ACL_ATTRIB_NAME, object.getAcl(), domElement, false);
     }
   }
 }

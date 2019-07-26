@@ -1,0 +1,3 @@
+http://tests.com/ proxy.com:3128
+http://www.another.com/ 1.2.3.4:3129
+another.com 1.2.3.4:3128

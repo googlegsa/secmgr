@@ -14,6 +14,7 @@
 
 package com.google.enterprise.secmgr.modules;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HttpHeaders;
@@ -29,7 +30,9 @@ import com.google.enterprise.secmgr.common.HttpUtil;
 import com.google.enterprise.secmgr.common.SecurityManagerUtil;
 import com.google.enterprise.secmgr.config.AuthnMechBasic;
 import com.google.enterprise.secmgr.http.BasicHttpAuthenticator;
+import com.google.enterprise.secmgr.http.DenyRules;
 import com.google.enterprise.secmgr.http.HttpRequester;
+import com.google.enterprise.secmgr.http.HttpRequester.Builder;
 import com.google.enterprise.secmgr.http.PageFetcherResult;
 import com.google.enterprise.secmgr.identity.AuthnPrincipal;
 import com.google.enterprise.secmgr.identity.CredPassword;
@@ -56,8 +59,16 @@ public final class HttpBasicModule implements AuthnModule {
   private static final LogClient gsaLogger = new LogClient("Security Manager",
       SecurityManagerUtil.getLogManagerServer());
 
+  private final DenyRules denyRules;
+
   @Inject
   private HttpBasicModule() {
+    denyRules = null;
+  }
+
+  @VisibleForTesting
+  HttpBasicModule(DenyRules denyRules) {
+    this.denyRules = denyRules;
   }
 
   @Override
@@ -148,12 +159,16 @@ public final class HttpBasicModule implements AuthnModule {
     }
 
     // This makes the testing of parameters passed in hard to test.
-    HttpRequester requester = HttpRequester.builder()
+    Builder requesterBuilder = HttpRequester.builder()
         .addAuthenticator(BasicHttpAuthenticator.make(username, password))
         .setParamsFromMechanism(view.getMechanism())
         .setSessionId(view.getSessionId())
-        .setRequestId(view.getRequestId())
-        .build();
+        .setRequestId(view.getRequestId());
+    if (denyRules != null) {
+      requesterBuilder.setDenyRules(denyRules);
+    }
+    HttpRequester requester = requesterBuilder.build();
+
     PageFetcherResult result = requester.fetch(new URL(sampleUrl));
     VerificationStatus status = result.getVerificationStatus();
     logger.info(view.logMessage("Sample url: %s user: %s status: %s",

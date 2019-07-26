@@ -24,112 +24,13 @@ import com.google.enterprise.secmgr.common.AuthzStatus;
 import com.google.enterprise.secmgr.common.Decorator;
 import com.google.enterprise.secmgr.common.FileUtil;
 import com.google.enterprise.secmgr.config.ConfigSingleton;
-import com.google.enterprise.secmgr.saml.OpenSamlUtil.DeferredSecurityPolicyRule.GenerationException;
-import com.google.enterprise.secmgr.saml.OpenSamlUtil.DeferredSecurityPolicyRule.Parameters;
-
-import org.joda.time.DateTime;
-import org.opensaml.Configuration;
-import org.opensaml.DefaultBootstrap;
-import org.opensaml.common.IdentifierGenerator;
-import org.opensaml.common.SAMLObject;
-import org.opensaml.common.SAMLObjectBuilder;
-import org.opensaml.common.SAMLVersion;
-import org.opensaml.common.binding.BasicSAMLMessageContext;
-import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.common.binding.artifact.BasicSAMLArtifactMap;
-import org.opensaml.common.binding.artifact.SAMLArtifactMap;
-import org.opensaml.common.binding.artifact.SAMLArtifactMap.SAMLArtifactMapEntry;
-import org.opensaml.common.binding.security.SAMLProtocolMessageXMLSignatureSecurityPolicyRule;
-import org.opensaml.common.impl.SecureRandomIdentifierGenerator;
-import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.binding.security.SAML2AuthnRequestsSignedRule;
-import org.opensaml.saml2.binding.security.SAML2HTTPRedirectDeflateSignatureRule;
-import org.opensaml.saml2.common.Extensions;
-import org.opensaml.saml2.common.impl.ExtensionsImpl;
-import org.opensaml.saml2.core.Action;
-import org.opensaml.saml2.core.Artifact;
-import org.opensaml.saml2.core.ArtifactResolve;
-import org.opensaml.saml2.core.ArtifactResponse;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.Attribute;
-import org.opensaml.saml2.core.AttributeStatement;
-import org.opensaml.saml2.core.Audience;
-import org.opensaml.saml2.core.AudienceRestriction;
-import org.opensaml.saml2.core.AuthnContext;
-import org.opensaml.saml2.core.AuthnContextClassRef;
-import org.opensaml.saml2.core.AuthnRequest;
-import org.opensaml.saml2.core.AuthnStatement;
-import org.opensaml.saml2.core.AuthzDecisionQuery;
-import org.opensaml.saml2.core.AuthzDecisionStatement;
-import org.opensaml.saml2.core.Conditions;
-import org.opensaml.saml2.core.DecisionTypeEnumeration;
-import org.opensaml.saml2.core.Issuer;
-import org.opensaml.saml2.core.NameID;
-import org.opensaml.saml2.core.RequestAbstractType;
-import org.opensaml.saml2.core.Response;
-import org.opensaml.saml2.core.Statement;
-import org.opensaml.saml2.core.Status;
-import org.opensaml.saml2.core.StatusCode;
-import org.opensaml.saml2.core.StatusMessage;
-import org.opensaml.saml2.core.StatusResponseType;
-import org.opensaml.saml2.core.Subject;
-import org.opensaml.saml2.core.SubjectConfirmation;
-import org.opensaml.saml2.core.SubjectConfirmationData;
-import org.opensaml.saml2.metadata.AssertionConsumerService;
-import org.opensaml.saml2.metadata.RoleDescriptor;
-import org.opensaml.saml2.metadata.SingleSignOnService;
-import org.opensaml.saml2.metadata.provider.FilesystemMetadataProvider;
-import org.opensaml.saml2.metadata.provider.MetadataProvider;
-import org.opensaml.saml2.metadata.provider.MetadataProviderException;
-import org.opensaml.security.MetadataCredentialResolver;
-import org.opensaml.security.MetadataCredentialResolverFactory;
-import org.opensaml.util.storage.MapBasedStorageService;
-import org.opensaml.ws.message.MessageContext;
-import org.opensaml.ws.message.decoder.MessageDecoder;
-import org.opensaml.ws.message.decoder.MessageDecodingException;
-import org.opensaml.ws.message.encoder.MessageEncoder;
-import org.opensaml.ws.message.encoder.MessageEncodingException;
-import org.opensaml.ws.security.SecurityPolicy;
-import org.opensaml.ws.security.SecurityPolicyResolver;
-import org.opensaml.ws.security.SecurityPolicyRule;
-import org.opensaml.ws.security.provider.BasicSecurityPolicy;
-import org.opensaml.ws.security.provider.MandatoryAuthenticatedMessageRule;
-import org.opensaml.ws.security.provider.MandatoryIssuerRule;
-import org.opensaml.ws.security.provider.StaticSecurityPolicyResolver;
-import org.opensaml.xml.ConfigurationException;
-import org.opensaml.xml.Namespace;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.XMLObjectBuilderFactory;
-import org.opensaml.xml.io.MarshallingException;
-import org.opensaml.xml.io.UnmarshallingException;
-import org.opensaml.xml.parse.BasicParserPool;
-import org.opensaml.xml.security.CriteriaSet;
-import org.opensaml.xml.security.SecurityException;
-import org.opensaml.xml.security.SecurityHelper;
-import org.opensaml.xml.security.credential.ChainingCredentialResolver;
-import org.opensaml.xml.security.credential.Credential;
-import org.opensaml.xml.security.credential.CredentialResolver;
-import org.opensaml.xml.security.keyinfo.BasicProviderKeyInfoCredentialResolver;
-import org.opensaml.xml.security.keyinfo.KeyInfoCredentialResolver;
-import org.opensaml.xml.security.keyinfo.KeyInfoCriteria;
-import org.opensaml.xml.security.keyinfo.KeyInfoProvider;
-import org.opensaml.xml.security.keyinfo.provider.DSAKeyValueProvider;
-import org.opensaml.xml.security.keyinfo.provider.InlineX509DataProvider;
-import org.opensaml.xml.security.keyinfo.provider.RSAKeyValueProvider;
-import org.opensaml.xml.security.trust.TrustEngine;
-import org.opensaml.xml.security.x509.X509Credential;
-import org.opensaml.xml.signature.KeyInfo;
-import org.opensaml.xml.signature.SignatureTrustEngine;
-import org.opensaml.xml.signature.impl.ExplicitKeySignatureTrustEngine;
-import org.w3c.dom.Element;
-
+import com.google.enterprise.secmgr.saml.Metadata.GsaFilesystemMetadataResolver;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.security.KeyException;
 import java.security.KeyStore;
-import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -140,13 +41,116 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.annotation.concurrent.Immutable;
+import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
+import net.shibboleth.utilities.java.support.component.ComponentInitializationException;
+import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
+import net.shibboleth.utilities.java.support.resolver.ResolverException;
+import net.shibboleth.utilities.java.support.security.IdentifierGenerationStrategy;
+import net.shibboleth.utilities.java.support.security.SecureRandomIdentifierGenerationStrategy;
+import net.shibboleth.utilities.java.support.xml.BasicParserPool;
+import org.joda.time.DateTime;
+import org.opensaml.core.config.InitializationException;
+import org.opensaml.core.config.InitializationService;
+import org.opensaml.core.xml.Namespace;
+import org.opensaml.core.xml.XMLObject;
+import org.opensaml.core.xml.XMLObjectBuilderFactory;
+import org.opensaml.core.xml.config.XMLObjectProviderRegistrySupport;
+import org.opensaml.core.xml.io.MarshallingException;
+import org.opensaml.core.xml.io.UnmarshallingException;
+import org.opensaml.messaging.context.BaseContext;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.messaging.decoder.MessageDecoder;
+import org.opensaml.messaging.decoder.MessageDecodingException;
+import org.opensaml.messaging.encoder.MessageEncoder;
+import org.opensaml.messaging.encoder.MessageEncodingException;
+import org.opensaml.messaging.handler.MessageHandler;
+import org.opensaml.messaging.handler.MessageHandlerException;
+import org.opensaml.messaging.handler.impl.BasicMessageHandlerChain;
+import org.opensaml.messaging.handler.impl.CheckMandatoryAuthentication;
+import org.opensaml.messaging.handler.impl.CheckMandatoryIssuer;
+import org.opensaml.saml.common.SAMLObject;
+import org.opensaml.saml.common.SAMLObjectBuilder;
+import org.opensaml.saml.common.SAMLVersion;
+import org.opensaml.saml.common.binding.artifact.SAMLArtifactMap;
+import org.opensaml.saml.common.binding.artifact.impl.BasicSAMLArtifactMap;
+import org.opensaml.saml.common.binding.impl.SAMLOutboundDestinationHandler;
+import org.opensaml.saml.common.binding.security.impl.SAMLOutboundProtocolMessageSigningHandler;
+import org.opensaml.saml.common.binding.security.impl.SAMLProtocolMessageXMLSignatureSecurityHandler;
+import org.opensaml.saml.common.messaging.context.SAMLPeerEntityContext;
+import org.opensaml.saml.common.messaging.context.SAMLProtocolContext;
+import org.opensaml.saml.common.xml.SAMLConstants;
+import org.opensaml.saml.metadata.resolver.MetadataResolver;
+import org.opensaml.saml.metadata.resolver.impl.FilesystemMetadataResolver;
+import org.opensaml.saml.metadata.resolver.impl.PredicateRoleDescriptorResolver;
+import org.opensaml.saml.saml2.binding.encoding.impl.HTTPPostEncoder;
+import org.opensaml.saml.saml2.binding.encoding.impl.HTTPRedirectDeflateEncoder;
+import org.opensaml.saml.saml2.binding.security.impl.SAML2AuthnRequestsSignedSecurityHandler;
+import org.opensaml.saml.saml2.binding.security.impl.SAML2HTTPRedirectDeflateSignatureSecurityHandler;
+import org.opensaml.saml.saml2.core.Action;
+import org.opensaml.saml.saml2.core.Artifact;
+import org.opensaml.saml.saml2.core.ArtifactResolve;
+import org.opensaml.saml.saml2.core.ArtifactResponse;
+import org.opensaml.saml.saml2.core.Assertion;
+import org.opensaml.saml.saml2.core.Attribute;
+import org.opensaml.saml.saml2.core.AttributeStatement;
+import org.opensaml.saml.saml2.core.Audience;
+import org.opensaml.saml.saml2.core.AudienceRestriction;
+import org.opensaml.saml.saml2.core.AuthnContext;
+import org.opensaml.saml.saml2.core.AuthnContextClassRef;
+import org.opensaml.saml.saml2.core.AuthnRequest;
+import org.opensaml.saml.saml2.core.AuthnStatement;
+import org.opensaml.saml.saml2.core.AuthzDecisionQuery;
+import org.opensaml.saml.saml2.core.AuthzDecisionStatement;
+import org.opensaml.saml.saml2.core.Conditions;
+import org.opensaml.saml.saml2.core.DecisionTypeEnumeration;
+import org.opensaml.saml.saml2.core.Extensions;
+import org.opensaml.saml.saml2.core.Issuer;
+import org.opensaml.saml.saml2.core.NameID;
+import org.opensaml.saml.saml2.core.RequestAbstractType;
+import org.opensaml.saml.saml2.core.Response;
+import org.opensaml.saml.saml2.core.Statement;
+import org.opensaml.saml.saml2.core.Status;
+import org.opensaml.saml.saml2.core.StatusCode;
+import org.opensaml.saml.saml2.core.StatusMessage;
+import org.opensaml.saml.saml2.core.StatusResponseType;
+import org.opensaml.saml.saml2.core.Subject;
+import org.opensaml.saml.saml2.core.SubjectConfirmation;
+import org.opensaml.saml.saml2.core.SubjectConfirmationData;
+import org.opensaml.saml.saml2.metadata.AssertionConsumerService;
+import org.opensaml.saml.saml2.metadata.RoleDescriptor;
+import org.opensaml.saml.saml2.metadata.SingleSignOnService;
+import org.opensaml.saml.security.impl.MetadataCredentialResolver;
+import org.opensaml.security.credential.Credential;
+import org.opensaml.security.credential.CredentialResolver;
+import org.opensaml.security.credential.CredentialSupport;
+import org.opensaml.security.credential.impl.ChainingCredentialResolver;
+import org.opensaml.security.crypto.KeySupport;
+import org.opensaml.security.trust.TrustEngine;
+import org.opensaml.security.x509.X509Credential;
+import org.opensaml.security.x509.X509Support;
+import org.opensaml.xmlsec.SignatureSigningParameters;
+import org.opensaml.xmlsec.SignatureValidationParameters;
+import org.opensaml.xmlsec.config.GlobalSecurityConfigurationInitializer;
+import org.opensaml.xmlsec.context.SecurityParametersContext;
+import org.opensaml.xmlsec.keyinfo.KeyInfoCredentialResolver;
+import org.opensaml.xmlsec.keyinfo.KeyInfoCriterion;
+import org.opensaml.xmlsec.keyinfo.impl.BasicProviderKeyInfoCredentialResolver;
+import org.opensaml.xmlsec.keyinfo.impl.KeyInfoProvider;
+import org.opensaml.xmlsec.keyinfo.impl.X509KeyInfoGeneratorFactory;
+import org.opensaml.xmlsec.keyinfo.impl.provider.DSAKeyValueProvider;
+import org.opensaml.xmlsec.keyinfo.impl.provider.InlineX509DataProvider;
+import org.opensaml.xmlsec.keyinfo.impl.provider.RSAKeyValueProvider;
+import org.opensaml.xmlsec.signature.KeyInfo;
+import org.opensaml.xmlsec.signature.support.SignatureConstants;
+import org.opensaml.xmlsec.signature.support.SignatureTrustEngine;
+import org.opensaml.xmlsec.signature.support.impl.ExplicitKeySignatureTrustEngine;
+import org.w3c.dom.Element;
 
 /**
  * A collection of utilities to support OpenSAML programming.  The majority of the
@@ -172,18 +176,6 @@ import javax.xml.namespace.QName;
  * <dt>{@link TrustEngine}
  * <dd>Evaluates the trustworthiness and validity of a given object against some given
  * criteria.  It is used as an element of some policy rules.
- *
- * <dt>{@link SecurityPolicy}
- * <dd>A collection of policy rules, evaluated against a message context, that determines
- * if a message is well-formed, valid, and otherwise okay to process.
- *
- * <dt>{@link SecurityPolicyRule}
- * <dd>A component of a security policy, also evaluated against a message context.
- *
- * <dt>{@link SecurityPolicyResolver}
- * <dd>Uses a given set of criteria to select a security policy.  We currently use only a
- * static policy resolver, which always returns the same policy.
- * </dl>
  *
  * <p>The programmer simply attaches a security-policy resolver to the SAML
  * message context and OpenSAML will automatically enforce the security policy
@@ -215,11 +207,11 @@ public final class OpenSamlUtil {
   public static final QName SAML_SIGNATURE_TAG
       = new QName("http://www.w3.org/2000/09/xmldsig#", "Signature", "ds");
 
-  public static final QName SAML_EXTENSIONS_TAG
-      = new QName(SAMLConstants.SAML20P_NS, "Extensions", SAMLConstants.SAML20P_PREFIX);
+  public static final QName SAML_EXTENSIONS_TAG = Extensions.DEFAULT_ELEMENT_NAME;
 
   public static final String GOOGLE_NS_URI = "http://www.google.com/";
   public static final String GOOGLE_NS_PREFIX = "goog";
+  public static String defaultDateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
 
   private static final boolean ACCEPT_DTD;
 
@@ -227,38 +219,39 @@ public final class OpenSamlUtil {
     ACCEPT_DTD = Boolean.parseBoolean(System.getProperty("gsa.acceptDTDInSamlResponse"));
 
     try {
-      DefaultBootstrap.bootstrap();
-    } catch (ConfigurationException e) {
+      InitializationService.initialize();
+      new GlobalSecurityConfigurationInitializer().init();
+    } catch (InitializationException e) {
       throw new IllegalStateException(e);
     }
 
     // This is required in order to patch around missing code in OpenSAML.
-    Configuration.registerObjectProvider(
+    XMLObjectProviderRegistrySupport.registerObjectProvider(
         AttributeValue.DEFAULT_ELEMENT_NAME,
         new AttributeValueBuilder(),
         new AttributeValueMarshaller(),
         new AttributeValueUnmarshaller());
-    Configuration.registerObjectProvider(
+    XMLObjectProviderRegistrySupport.registerObjectProvider(
         GsaAuthn.DEFAULT_ELEMENT_NAME,
         new GsaAuthnBuilder(),
         new GsaAuthnMarshaller(),
         new GsaAuthnUnmarshaller());
-    Configuration.registerObjectProvider(
+    XMLObjectProviderRegistrySupport.registerObjectProvider(
         GsaAuthz.DEFAULT_ELEMENT_NAME,
         new GsaAuthzBuilder(),
         new GsaAuthzMarshaller(),
         new GsaAuthzUnmarshaller());
-    Configuration.registerObjectProvider(
+    XMLObjectProviderRegistrySupport.registerObjectProvider(
         Resource.DEFAULT_ELEMENT_NAME,
         new ResourceBuilder(),
         new ResourceMarshaller(),
         new ResourceUnmarshaller());
-    Configuration.registerObjectProvider(
+    XMLObjectProviderRegistrySupport.registerObjectProvider(
         Group.DEFAULT_ELEMENT_NAME,
         new GroupBuilder(),
         new GroupMarshaller(),
         new GroupUnmarshaller());
-    Configuration.registerObjectProvider(
+    XMLObjectProviderRegistrySupport.registerObjectProvider(
         SecmgrCredential.DEFAULT_ELEMENT_NAME,
         new SecmgrCredentialBuilder(),
         new SecmgrCredentialMarshaller(),
@@ -266,12 +259,12 @@ public final class OpenSamlUtil {
   }
 
   private static final XMLObjectBuilderFactory objectBuilderFactory =
-      Configuration.getBuilderFactory();
+      XMLObjectProviderRegistrySupport.getBuilderFactory();
 
   // TODO: @SuppressWarnings is needed because objectBuilderFactory.getBuilder() returns a
   // supertype of the actual type.
   @SuppressWarnings("unchecked")
-  private static <T extends SAMLObject> SAMLObjectBuilder<T> makeSamlObjectBuilder(QName name) {
+  static <T extends SAMLObject> SAMLObjectBuilder<T> makeSamlObjectBuilder(QName name) {
     return (SAMLObjectBuilder<T>) objectBuilderFactory.getBuilder(name);
   }
 
@@ -312,7 +305,7 @@ public final class OpenSamlUtil {
   private static final SAMLObjectBuilder<Conditions> conditionsBuilder =
       makeSamlObjectBuilder(Conditions.DEFAULT_ELEMENT_NAME);
   private static final SAMLObjectBuilder<Extensions> extensionsBuilder =
-      makeSamlObjectBuilder(SAML_EXTENSIONS_TAG);
+      makeSamlObjectBuilder(Extensions.DEFAULT_ELEMENT_NAME);
   private static final SAMLObjectBuilder<Issuer> issuerBuilder =
       makeSamlObjectBuilder(Issuer.DEFAULT_ELEMENT_NAME);
   private static final SAMLObjectBuilder<NameID> nameIDBuilder =
@@ -349,15 +342,8 @@ public final class OpenSamlUtil {
       makeSamlObjectBuilder(SingleSignOnService.DEFAULT_ELEMENT_NAME);
 
   // Identifier generator
-
-  private static final IdentifierGenerator idGenerator;
-  static {
-    try {
-      idGenerator = new SecureRandomIdentifierGenerator();
-    } catch (NoSuchAlgorithmException e) {
-      throw new IllegalStateException(e);
-    }
-  }
+  private static final IdentifierGenerationStrategy idGenerator =
+      new SecureRandomIdentifierGenerationStrategy();
 
   // Non-instantiable class.
   private OpenSamlUtil() {
@@ -703,18 +689,14 @@ public final class OpenSamlUtil {
    * @return A new {@code Extensions} object.
    */
   public static Extensions makeExtensions(Iterable<XMLObject> children) {
-    ExtensionsImpl extensions
-        // Must use explicit arguments here, because OpenSAML has the wrong
-        // namespace and prefix for this element.
-        = (ExtensionsImpl) extensionsBuilder.buildObject(
-            SAML_EXTENSIONS_TAG.getNamespaceURI(),
-            SAML_EXTENSIONS_TAG.getLocalPart(),
-            SAML_EXTENSIONS_TAG.getPrefix());
+    Extensions extensions = extensionsBuilder.buildObject();
     for (XMLObject child : children) {
       child.setParent(extensions);
     }
     Iterables.addAll(extensions.getUnknownXMLObjects(), children);
-    extensions.addNamespace(new Namespace(GOOGLE_NS_URI, GOOGLE_NS_PREFIX));
+    extensions
+        .getNamespaceManager()
+        .registerNamespaceDeclaration(new Namespace(GOOGLE_NS_URI, GOOGLE_NS_PREFIX));
     return extensions;
   }
 
@@ -896,7 +878,7 @@ public final class OpenSamlUtil {
    */
   @Nonnull
   public static Status makeSuccessfulStatus() {
-    return makeStatus(makeStatusCode(StatusCode.SUCCESS_URI), null);
+    return makeStatus(makeStatusCode(StatusCode.SUCCESS), null);
   }
 
   /**
@@ -907,7 +889,7 @@ public final class OpenSamlUtil {
   @Nonnull
   public static Status makeAuthnFailureStatus() {
     return makeStatus(
-        makeStatusCode(StatusCode.RESPONDER_URI, StatusCode.AUTHN_FAILED_URI),
+        makeStatusCode(StatusCode.RESPONDER, StatusCode.AUTHN_FAILED),
         makeStatusMessage("Authentication failed"));
   }
 
@@ -921,7 +903,7 @@ public final class OpenSamlUtil {
   public static Status makeSecurityFailureStatus(String message) {
     Preconditions.checkNotNull(message);
     return makeStatus(
-        makeStatusCode(StatusCode.REQUESTER_URI, StatusCode.REQUEST_DENIED_URI),
+        makeStatusCode(StatusCode.REQUESTER, StatusCode.REQUEST_DENIED),
         makeStatusMessage(message));
   }
 
@@ -934,9 +916,7 @@ public final class OpenSamlUtil {
   @Nonnull
   public static Status makeResponderFailureStatus(String message) {
     Preconditions.checkNotNull(message);
-    return makeStatus(
-        makeStatusCode(StatusCode.RESPONDER_URI),
-        makeStatusMessage(message));
+    return makeStatus(makeStatusCode(StatusCode.RESPONDER), makeStatusMessage(message));
   }
 
   /**
@@ -946,9 +926,7 @@ public final class OpenSamlUtil {
    */
   @Nonnull
   public static Status makeSecurityFailureStatus() {
-    return makeStatus(
-        makeStatusCode(StatusCode.REQUESTER_URI, StatusCode.REQUEST_DENIED_URI),
-        null);
+    return makeStatus(makeStatusCode(StatusCode.REQUESTER, StatusCode.REQUEST_DENIED), null);
   }
 
   /**
@@ -958,7 +936,7 @@ public final class OpenSamlUtil {
    * @return True if it's a successful element.
    */
   public static boolean isSuccessfulStatus(Status status) {
-    return StatusCode.SUCCESS_URI.equals(status.getStatusCode().getValue());
+    return StatusCode.SUCCESS.equals(status.getStatusCode().getValue());
   }
 
   /**
@@ -970,13 +948,12 @@ public final class OpenSamlUtil {
   public static boolean isAuthnFailureStatus(Status status) {
     StatusCode statusCode = status.getStatusCode();
     StatusCode secondaryCode = statusCode.getStatusCode();
-    return
-        (StatusCode.RESPONDER_URI.equals(statusCode.getValue())
+    return (StatusCode.RESPONDER.equals(statusCode.getValue())
             && secondaryCode != null
-            && StatusCode.AUTHN_FAILED_URI.equals(secondaryCode.getValue()))
+            && StatusCode.AUTHN_FAILED.equals(secondaryCode.getValue()))
         // This next is for backwards compatibility; we used to generate this
         // (incorrect) status value.
-        || StatusCode.AUTHN_FAILED_URI.equals(statusCode.getValue());
+        || StatusCode.AUTHN_FAILED.equals(statusCode.getValue());
   }
 
   /**
@@ -988,9 +965,9 @@ public final class OpenSamlUtil {
   public static boolean isSecurityFailureStatus(Status status) {
     StatusCode statusCode = status.getStatusCode();
     StatusCode secondaryCode = statusCode.getStatusCode();
-    return StatusCode.REQUESTER_URI.equals(statusCode.getValue())
+    return StatusCode.REQUESTER.equals(statusCode.getValue())
         && secondaryCode != null
-        && StatusCode.REQUEST_DENIED_URI.equals(secondaryCode.getValue());
+        && StatusCode.REQUEST_DENIED.equals(secondaryCode.getValue());
   }
 
   /**
@@ -1006,10 +983,10 @@ public final class OpenSamlUtil {
   }
 
   private static boolean validTopLevelStatusCodeUri(String value) {
-    return StatusCode.SUCCESS_URI.equals(value)
-        || StatusCode.REQUESTER_URI.equals(value)
-        || StatusCode.RESPONDER_URI.equals(value)
-        || StatusCode.VERSION_MISMATCH_URI.equals(value);
+    return StatusCode.SUCCESS.equals(value)
+        || StatusCode.REQUESTER.equals(value)
+        || StatusCode.RESPONDER.equals(value)
+        || StatusCode.VERSION_MISMATCH.equals(value);
   }
 
   private static StatusCode makeStatusCodeInternal(String value) {
@@ -1133,16 +1110,13 @@ public final class OpenSamlUtil {
   /**
    * Static factory for OpenSAML message-context objects.
    *
-   * @param <TI> The type of the request object.
-   * @param <TO> The type of the response object.
-   * @param <TN> The type of the name identifier used for subjects.
    * @return A new message-context object.
    */
-  public static <TI extends SAMLObject, TO extends SAMLObject, TN extends SAMLObject>
-        SAMLMessageContext<TI, TO, TN> makeSamlMessageContext() {
-    SAMLMessageContext<TI, TO, TN> context = new BasicSAMLMessageContext<TI, TO, TN>();
-    context.setInboundSAMLProtocol(SAMLConstants.SAML20P_NS);  // we only use SAML 2.0
-    context.setOutboundSAMLProtocol(SAMLConstants.SAML20P_NS);
+  public static <T extends SAMLObject> MessageContext<T> makeSamlMessageContext() {
+    MessageContext<T> context = new org.opensaml.messaging.context.MessageContext<>();
+    context.setAutoCreateSubcontexts(true);
+    SAMLProtocolContext protocolContext = context.getSubcontext(SAMLProtocolContext.class);
+    protocolContext.setProtocol(SAMLConstants.SAML20P_NS); // we only use SAML 2.0
     return context;
   }
 
@@ -1154,32 +1128,95 @@ public final class OpenSamlUtil {
    * @param decorator A log-message decorator.
    * @throws IOException if unable to encode message.
    */
-  public static void runEncoder(MessageEncoder encoder, MessageContext context, Decorator decorator)
+  public static void runEncoder(
+      MessageEncoder<SAMLObject> encoder, MessageContext<SAMLObject> context, Decorator decorator)
       throws IOException {
     try {
-      encoder.encode(context);
-    } catch (MessageEncodingException e) {
-      throw logCodecMessage(e, "encode", decorator, context.getOutboundMessage().getElementQName());
+      MessageHandler<SAMLObject> handler = getOutboundMessageHandlers(encoder);
+      handler.initialize();
+      handler.invoke(context);
+
+      if (!encoder.isInitialized()) {
+        encoder.setMessageContext(context);
+        encoder.initialize();
+      }
+      encoder.prepareContext();
+      encoder.encode();
+    } catch (MessageEncodingException
+        | ComponentInitializationException
+        | MessageHandlerException e) {
+      throw logCodecMessage(e, "encode", decorator, context);
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static MessageHandler<SAMLObject> getOutboundMessageHandlers(
+      MessageEncoder<SAMLObject> encoder) {
+    BasicMessageHandlerChain<SAMLObject> handler = new BasicMessageHandlerChain<>();
+    List<MessageHandler<SAMLObject>> handlers = new ArrayList<>();
+    SAMLOutboundDestinationHandler outboundDestinationHandler =
+        new SAMLOutboundDestinationHandler();
+    // This was implemented in HTTPPostEncoder and HTTPRedirectDeflateEncoder in OpenSaml v2
+    outboundDestinationHandler.setActivationCondition(
+        context ->
+            encoder instanceof HTTPPostEncoder || encoder instanceof HTTPRedirectDeflateEncoder);
+    handlers.add(outboundDestinationHandler);
+    handlers.add(new SAMLOutboundProtocolMessageSigningHandler());
+
+    handler.setHandlers(handlers);
+    return handler;
   }
 
   /**
    * Runs a message decoder.
    *
    * @param decoder The message decoder to run.
-   * @param context The message context to pass to the decoder.
    * @param decorator A log-message decorator.
-   * @param elementName The name of the element being decoded.
    * @throws IOException if unable to decode message.
-   * @throws SecurityException if the decoded message violates the security policy.
    */
-  public static void runDecoder(MessageDecoder decoder, MessageContext context, Decorator decorator,
-      QName elementName)
-      throws IOException, SecurityException {
+  public static void runDecoder(
+      MessageDecoder<SAMLObject> decoder, MessageContext<SAMLObject> context, Decorator decorator)
+      throws IOException {
     try {
-      decoder.decode(context);
-    } catch (MessageDecodingException e) {
-      throw logCodecMessage(e, "decode", decorator, elementName);
+      if (!decoder.isInitialized()) {
+        decoder.initialize();
+      }
+      decoder.decode();
+    } catch (MessageDecodingException | ComponentInitializationException e) {
+      throw logCodecMessage(e, "decode", decorator, decoder.getMessageContext());
+    }
+    mergeContexts(context, decoder.getMessageContext());
+  }
+
+  private static void mergeContexts(
+      MessageContext<SAMLObject> context, MessageContext<SAMLObject> decodedContext) {
+    context.setMessage(decodedContext.getMessage());
+    for (BaseContext subContext : Lists.newArrayList(decodedContext)) {
+      context.addSubcontext(subContext, true);
+    }
+  }
+
+  /**
+   * Runs the previously stored ({@link InboundMessageHandlerContext}) message handlers on message
+   * context.
+   *
+   * @param context The message context to run the handlers on. Should contain {@link
+   *     InboundMessageHandlerContext} as a sub-context.
+   * @throws MessageHandlerException if the message handler throws an exception.
+   */
+  public static void runInboundMessageHandlers(MessageContext<SAMLObject> context)
+      throws MessageHandlerException {
+    MessageHandler<SAMLObject> handler =
+        context.getSubcontext(InboundMessageHandlerContext.class, true).getMessageHandler();
+    if (handler != null) {
+      try {
+        if (!handler.isInitialized()) {
+          handler.initialize();
+        }
+        handler.invoke(context);
+      } catch (ComponentInitializationException | MessageHandlerException e) {
+        throw new MessageHandlerException(e);
+      }
     }
   }
 
@@ -1206,72 +1243,67 @@ public final class OpenSamlUtil {
       newBuilderFeatures.put("http://apache.org/xml/features/disallow-doctype-decl", false);
     }
     parserPool.setBuilderFeatures(newBuilderFeatures);
+    try {
+      parserPool.initialize();
+    } catch (ComponentInitializationException e) {
+      logger.warning("Failed to initialize parser pool: " + e.getMessage());
+      throw new IllegalStateException("Failed to initialize parser pool", e);
+    }
     return parserPool;
   }
 
-  private static IOException logCodecMessage(Throwable e, String verbPhrase, Decorator decorator,
-      QName elementName) {
-    String message = "Unable to " + verbPhrase + " " + elementName.getLocalPart() + " message: ";
+  private static IOException logCodecMessage(
+      Throwable e, String verbPhrase, Decorator decorator, MessageContext<SAMLObject> context) {
+    String elementName =
+        (context == null || context.getMessage() == null)
+            ? ""
+            : context.getMessage().getElementQName().getLocalPart();
+    String message = "Unable to " + verbPhrase + " " + elementName + " message: ";
     logger.warning(decorator.apply(message + e.getMessage()));
     return new IOException(message, e);
   }
 
   /**
-   * Get a string for the current date/time, in the correct format for SAML.
-   *
-   * @return The corresponding string.
-   */
-  public static String samlDateString() {
-    return samlDateString(new DateTime());
-  }
-
-  /**
-   * Get a string for a given date/time, in the correct format for SAML.
-   *
-   * @param date The date/time to convert.
-   * @return The corresponding string.
-   */
-  public static String samlDateString(DateTime date) {
-    synchronized (samlDateStringLock) {
-      return Configuration.getSAMLDateFormatter().print(date);
-    }
-  }
-
-  private static final Object samlDateStringLock = new Object();
-
-  /**
-   * Get a SAML metadata provider that reads from a specified file.  The provider adjusts
-   * its output as the file is changed.
+   * Get a SAML metadata resolver that reads from our template metadata file.
    *
    * @param file The file containing the metadata.
    * @return A metadata provider for the given file.
-   * @throws MetadataProviderException if there are problems reading the file.
+   * @throws ResolverException if there are problems reading the file.
+   * @throws ComponentInitializationException if resolver cannot be initialized
    */
-  public static FilesystemMetadataProvider getMetadataFromFile(File file)
-      throws MetadataProviderException {
-    FilesystemMetadataProvider provider = new FilesystemMetadataProvider(file);
-    provider.setParserPool(new BasicParserPool());
+  public static FilesystemMetadataResolver getMetadataFromFile(
+      File file, String urlPrefix, String configuredEntityId)
+      throws ResolverException, ComponentInitializationException {
+    FilesystemMetadataResolver resolver =
+        new GsaFilesystemMetadataResolver(file, urlPrefix, configuredEntityId);
+    resolver.setParserPool(OpenSamlUtil.getBasicParserPool());
     // Causes null-pointer errors in OpenSAML code:
-    //provider.setRequireValidMetadata(true);
-    return provider;
+    resolver.setRequireValidMetadata(true);
+    resolver.setId(file.getAbsolutePath());
+    resolver.setResolveViaPredicatesOnly(true);
+    resolver.initialize();
+    return resolver;
   }
 
   /**
-   * Initializes the security policy for an inbound message.  This validates the
-   * message signature according to the policy.
+   * Initializes the security policy for an inbound message. This validates the message signature
+   * according to the policy.
    *
    * @param context The message context being used to decode the message.
-   * @param rules The security-policy rules to use.
+   * @param handlers The message handlers to use.
    */
+  @SafeVarargs
   public static void initializeSecurityPolicy(
-      SAMLMessageContext<? extends SAMLObject, ? extends SAMLObject, ? extends SAMLObject> context,
-      DeferredSecurityPolicyRule... rules) {
-    MetadataProvider metadataProvider;
-    if (context.getPeerEntityRole() != null) {
-      metadataProvider = context.getMetadataProvider();
+      MessageContext<SAMLObject> context, MessageHandler<SAMLObject>... handlers) {
+    MetadataResolver metadataResolver = null;
+    SAMLPeerEntityContext peerEntityContext =
+        context.getSubcontext(SAMLPeerEntityContext.class, true);
+    Metadata.MetadataContext metadataContext =
+        context.getSubcontext(Metadata.MetadataContext.class, false);
+    if (peerEntityContext.getRole() != null && metadataContext != null) {
+      metadataResolver = metadataContext.getMetadata().getResolver();
     } else {
       logger.warning("No peer entity role available, not using metadata credentials.");
-      metadataProvider = null;
     }
     KeyStore cacertsTrustStore;
     try {
@@ -1283,228 +1315,168 @@ public final class OpenSamlUtil {
       logger.warning("No CA certificates available, not using them: " + e.getMessage());
       cacertsTrustStore = null;
     }
-    initializeSecurityPolicy(context,
-        new Parameters(metadataProvider, cacertsTrustStore),
-        rules);
+    initializeSecurityParametersContext(context, metadataResolver, cacertsTrustStore);
+    addMessageHandlers(context, handlers);
+  }
+
+  private static void initializeSecurityParametersContext(
+      MessageContext<SAMLObject> context,
+      MetadataResolver metadataResolver,
+      KeyStore cacertsTrustStore) {
+    SecurityParametersContext secParams =
+        context.getSubcontext(SecurityParametersContext.class, true);
+    SignatureValidationParameters signatureValidationParameters =
+        new SignatureValidationParameters();
+    try {
+      signatureValidationParameters.setSignatureTrustEngine(
+          getStandardSignatureTrustEngine(metadataResolver, cacertsTrustStore));
+    } catch (IOException e) {
+      logger.warning("Failed to initialize signature validation parameters.");
+    }
+    secParams.setSignatureValidationParameters(signatureValidationParameters);
   }
 
   /** Entry point that allows the parameters to be injected. */
+  @SafeVarargs
   @VisibleForTesting
-  public static void initializeSecurityPolicy(
-      SAMLMessageContext<? extends SAMLObject, ? extends SAMLObject, ? extends SAMLObject> context,
-      Parameters parameters, DeferredSecurityPolicyRule... rules) {
-    if (context.getPeerEntityRole() == null) {
+  public static void addMessageHandlers(
+      MessageContext<SAMLObject> context, MessageHandler<SAMLObject>... handlers) {
+    SAMLPeerEntityContext peerEntityContext =
+        context.getSubcontext(SAMLPeerEntityContext.class, true);
+    if (peerEntityContext.getRole() == null) {
       // SAMLProtocolMessageXMLSignatureSecurityPolicyRule always generates a
       // MetadataCriteria, even if no metadata is to be used.  In turn,
       // MetadataCriteria requires peerEntityRole to be non-null, so we'd better
       // set it to something.  This value should be harmless.
-      context.setPeerEntityRole(RoleDescriptor.DEFAULT_ELEMENT_NAME);
+      peerEntityContext.setRole(RoleDescriptor.DEFAULT_ELEMENT_NAME);
     }
-    ImmutableList.Builder<SecurityPolicyRule> builder = ImmutableList.builder();
-    for (DeferredSecurityPolicyRule rule : rules) {
-      try {
-        builder.add(rule.apply(parameters));
-      } catch (GenerationException e) {
-        continue;
-      }
-    }
-    context.setSecurityPolicyResolver(
-        makeStaticSecurityPolicyResolver(
-            makeBasicSecurityPolicy(builder.build())));
+    BasicMessageHandlerChain<SAMLObject> handlerChain = new BasicMessageHandlerChain<>();
+    handlerChain.setHandlers(Arrays.asList(handlers));
+    context.getSubcontext(InboundMessageHandlerContext.class, true).setMessageHandler(handlerChain);
   }
 
-  /**
-   * Makes a static security-policy resolver that resolves to a given policy.
-   *
-   * @param policy The security policy to resolve to.
-   * @return A security-policy resolver that resolves to the given policy.
-   */
-  @Nonnull
-  public static SecurityPolicyResolver makeStaticSecurityPolicyResolver(SecurityPolicy policy) {
-    return new StaticSecurityPolicyResolver(policy);
-  }
-
-  /**
-   * Makes a basic security policy, consisting of a set of rules that must all be satisfied.
-   *
-   * @param rules The rules comprising the policy.
-   * @return A new security policy.
-   */
-  @Nonnull
-  public static SecurityPolicy makeBasicSecurityPolicy(Iterable<SecurityPolicyRule> rules) {
-    BasicSecurityPolicy securityPolicy = new BasicSecurityPolicy();
-    Iterables.addAll(securityPolicy.getPolicyRules(), rules);
-    return securityPolicy;
-  }
-
-  /**
-   * An abstraction for deferring the generation of a
-   * {@link SecurityPolicyRule}.  Used in conjunction with
-   * {@link #initializeSecurityPolicy}, which supplies the arguments needed to
-   * specialize the generated rule.
-   */
-  public abstract static class DeferredSecurityPolicyRule {
-    /**
-     * Generates a security policy rule, given some derived information.
-     *
-     * @param parameters An object containing the derived information to use.
-     * @return A security policy rule.
-     * @throws GenerationException if the rule can't be generated for any reason.
-     */
-    @Nonnull
-    protected abstract SecurityPolicyRule apply(Parameters parameters)
-        throws GenerationException;
-
-    /**
-     * A structure containing the relevant derived information that can be used
-     * when building seurity policy rules.
-     */
-    @VisibleForTesting  // otherwise would be protected
-    public static final class Parameters {
-      private final MetadataProvider metadataProvider;
-      private final KeyStore cacertsTrustStore;
-
-      private Parameters(@Nullable MetadataProvider metadataProvider,
-          @Nullable KeyStore cacertsTrustStore) {
-        this.metadataProvider = metadataProvider;
-        this.cacertsTrustStore = cacertsTrustStore;
-      }
-
-      public boolean useMetadata() {
-        return metadataProvider != null;
-      }
-
-      @Nullable
-      public MetadataProvider getMetadataProvider() {
-        return metadataProvider;
-      }
-
-      public boolean useCacerts() {
-        return cacertsTrustStore != null;
-      }
-
-      @Nullable
-      public KeyStore getCacertsTrustStore() {
-        return cacertsTrustStore;
-      }
-    }
-
-    /**
-     * An exception that's thrown by the {@link #apply} method when it is unable
-     * to generate a result.
-     */
-    protected static final class GenerationException extends Exception {
-      GenerationException() {
-        super();
-      }
-    }
-  }
-
-  private static final class ConstantSecurityPolicyRule extends DeferredSecurityPolicyRule {
-    final SecurityPolicyRule rule;
-
-    ConstantSecurityPolicyRule(SecurityPolicyRule rule) {
-      super();
-      this.rule = rule;
-    }
-
-    @Override
-    protected SecurityPolicyRule apply(Parameters parameters) {
-      return rule;
-    }
-  }
-
-  /**
-   * Gets a security policy rule that requires a message to have an Issuer.
-   */
-  @Nonnull
-  public static DeferredSecurityPolicyRule getMandatoryIssuerRule() {
-    return new ConstantSecurityPolicyRule(new MandatoryIssuerRule());
-  }
-
-  /**
-   * Gets a security policy rule that requires a message to have a valid signature.
-   */
-  @Nonnull
-  public static DeferredSecurityPolicyRule getMandatoryAuthenticatedMessageRule() {
-    return new ConstantSecurityPolicyRule(new MandatoryAuthenticatedMessageRule());
-  }
-
-  /**
-   * Gets a security policy rule that requires a signature to be present if the
-   * metadata says it's supposed to be there.
-   */
-  @Nonnull
-  public static DeferredSecurityPolicyRule getAuthnRequestsSignedRule() {
-    return new ConstantSecurityPolicyRule(new SAML2AuthnRequestsSignedRule());
-  }
-
-  /**
-   * Gets a security policy rule for XML signatures, using metadata credentials.
-   */
-  @Nonnull
-  public static DeferredSecurityPolicyRule getXmlSignatureRule() {
-    return new DeferredSecurityPolicyRule() {
-      @Override
-      protected SecurityPolicyRule apply(Parameters parameters)
-          throws GenerationException {
-        return new SAMLProtocolMessageXMLSignatureSecurityPolicyRule(
-            getStandardSignatureTrustEngine(parameters));
-      }
-    };
-  }
-
-  /**
-   * Gets a security policy rule for the redirect binding, using metadata credentials.
-   */
-  @Nonnull
-  public static DeferredSecurityPolicyRule getRedirectSignatureRule() {
-    return new DeferredSecurityPolicyRule() {
-      @Override
-      protected SecurityPolicyRule apply(Parameters parameters)
-          throws GenerationException {
-        return new SAML2HTTPRedirectDeflateSignatureRule(
-            getStandardSignatureTrustEngine(parameters));
-      }
-    };
-  }
-
-  private static SignatureTrustEngine getStandardSignatureTrustEngine(Parameters parameters)
-      throws GenerationException {
+  private static SignatureTrustEngine getStandardSignatureTrustEngine(
+      MetadataResolver metadataResolver, KeyStore cacertsTrustStore) throws IOException {
     KeyInfoCredentialResolver keyInfoCredentialResolver = getStandardKeyInfoCredentialResolver();
     List<CredentialResolver> resolvers = Lists.newArrayList();
-    if (parameters.useMetadata()) {
-      resolvers.add(
-          metadataCredentialResolver(
-              parameters.getMetadataProvider(),
-              keyInfoCredentialResolver));
+    if (metadataResolver != null) {
+      resolvers.add(metadataCredentialResolver(metadataResolver, keyInfoCredentialResolver));
     }
-    if (parameters.useCacerts()) {
-      resolvers.add(CacertsCredentialResolver.make(parameters.getCacertsTrustStore()));
+    if (cacertsTrustStore != null) {
+      resolvers.add(CacertsCredentialResolver.make(cacertsTrustStore));
     }
     return new ExplicitKeySignatureTrustEngine(
-        chainCredentialResolvers(resolvers),
-        keyInfoCredentialResolver);
+        chainCredentialResolvers(resolvers), keyInfoCredentialResolver);
   }
 
-  private static CredentialResolver metadataCredentialResolver(MetadataProvider metadataProvider,
-      KeyInfoCredentialResolver keyInfoCredentialResolver) {
-    MetadataCredentialResolver credentialResolver
-        = MetadataCredentialResolverFactory.getFactory().getInstance(metadataProvider);
+  /** Gets a security policy rule that requires a message to have an Issuer. */
+  @Nonnull
+  @SuppressWarnings("unchecked")
+  public static MessageHandler<SAMLObject> getCheckMandatoryIssuerHandler() {
+    CheckMandatoryIssuer handler = new CheckMandatoryIssuer();
+    handler.setIssuerLookupStrategy(context -> getMessageIssuer(context).getValue());
+    return handler;
+  }
+  
+  /** Resolves the {@link Issuer} of a message context
+   *  
+   *  @param context The message context
+   */
+  public static Issuer getMessageIssuer(MessageContext<SAMLObject> context) {
+    Object msg = context.getMessage();
+    if (msg instanceof AuthnRequest) {
+      return ((AuthnRequest) msg).getIssuer();
+    } else if (msg instanceof Response) {
+      return ((Response) msg).getIssuer();
+    } else if (msg instanceof AuthzDecisionQuery) {
+      return ((AuthzDecisionQuery) msg).getIssuer();
+    } else if (msg instanceof ArtifactResolve) {
+      return ((ArtifactResolve) msg).getIssuer();
+    } else if (msg instanceof ArtifactResponse) {
+      return ((ArtifactResponse) msg).getIssuer();
+    }
+    throw new UnsupportedOperationException(
+        "Unsupported message type: " + msg.getClass().getName());
+  }
+
+  /** Resolves the message ID of a message context
+   *  
+   *  @param context The message context
+   */
+  public static String getMessageId(MessageContext<SAMLObject> context) {
+    Object msg = context.getMessage();
+    if (msg instanceof AuthnRequest) {
+      return ((AuthnRequest) context.getMessage()).getID();
+    } else if (msg instanceof Response) {
+      return ((Response) context.getMessage()).getID();
+    }
+    throw new IllegalArgumentException(
+        "Unsupported message type: " + context.getMessage().getElementQName());
+  }
+
+  /** Gets a security policy rule that requires a message to have a valid signature. */
+  @Nonnull
+  @SuppressWarnings("unchecked")
+  public static MessageHandler<SAMLObject> getCheckMandatoryAuthenticatedMessageHandler() {
+    CheckMandatoryAuthentication handler = new CheckMandatoryAuthentication();
+    handler.setAuthenticationLookupStrategy(
+        c -> c.getSubcontext(SAMLPeerEntityContext.class, true).isAuthenticated());
+    return handler;
+  }
+
+  /**
+   * Gets a security policy rule that requires a signature to be present if the metadata says it's
+   * supposed to be there.
+   */
+  @Nonnull
+  public static MessageHandler<SAMLObject> getAuthnRequestsSignedHandler() {
+    return new SAML2AuthnRequestsSignedSecurityHandler();
+  }
+
+  /** Gets a security policy rule for XML signatures, using metadata credentials. */
+  @Nonnull
+  @SuppressWarnings("unchecked")
+  public static MessageHandler<SAMLObject> getXmlSignatureHandler() {
+    return new SAMLProtocolMessageXMLSignatureSecurityHandler();
+  }
+
+  /** Gets a security policy handler for the redirect binding, using metadata credentials. */
+  @Nonnull
+  @SuppressWarnings("unchecked")
+  public static MessageHandler<SAMLObject> getRedirectSignatureHandler(HttpServletRequest request) {
+    SAML2HTTPRedirectDeflateSignatureSecurityHandler handler =
+        new SAML2HTTPRedirectDeflateSignatureSecurityHandler();
+    handler.setHttpServletRequest(request);
+    return handler;
+  }
+
+  private static CredentialResolver metadataCredentialResolver(
+      MetadataResolver metadataResolver, KeyInfoCredentialResolver keyInfoCredentialResolver) {
+    MetadataCredentialResolver credentialResolver = new MetadataCredentialResolver();
+    PredicateRoleDescriptorResolver roleDescriptorResolver =
+        new PredicateRoleDescriptorResolver(metadataResolver);
+    credentialResolver.setRoleDescriptorResolver(roleDescriptorResolver);
     credentialResolver.setKeyInfoCredentialResolver(keyInfoCredentialResolver);
+    try {
+      credentialResolver.initialize();
+      roleDescriptorResolver.initialize();
+    } catch (ComponentInitializationException e) {
+      logger.warning("Failed to initialize metadata credential resolver: " + e.getMessage());
+      throw new IllegalStateException("Failed to initialize metadata credential resolver", e);
+    }
     return credentialResolver;
   }
 
   private static CredentialResolver chainCredentialResolvers(List<CredentialResolver> resolvers)
-      throws GenerationException {
+      throws IOException {
     switch (resolvers.size()) {
       case 0:
-        throw new GenerationException();
+        throw new IOException();
       case 1:
         return resolvers.get(0);
       default:
-        ChainingCredentialResolver chainingCredentialResolver = new ChainingCredentialResolver();
-        chainingCredentialResolver.getResolverChain().addAll(resolvers);
+        ChainingCredentialResolver chainingCredentialResolver =
+            new ChainingCredentialResolver(resolvers);
         return chainingCredentialResolver;
     }
   }
@@ -1532,12 +1504,12 @@ public final class OpenSamlUtil {
    *
    * @param keyInfo The KeyInfo object to examine.
    * @return The standard credentials found in the object.
-   * @throws SecurityException
+   * @throws ResolverException
    */
   public static Iterable<Credential> resolveStandardKeyInfoCredentials(KeyInfo keyInfo)
-      throws SecurityException {
+      throws ResolverException {
     return getStandardKeyInfoCredentialResolver()
-        .resolve(new CriteriaSet(new KeyInfoCriteria(keyInfo)));
+        .resolve(new CriteriaSet(new KeyInfoCriterion(keyInfo)));
   }
 
   /**
@@ -1549,11 +1521,10 @@ public final class OpenSamlUtil {
    * @return The credential object, never null.
    * @throws IOException if there's some kind of error reading or converting the files.
    */
-  public static X509Credential readX509Credential(File certFile, File keyFile)
+  public static Credential readX509Credential(File certFile, File keyFile)
       throws IOException {
-    return SecurityHelper.getSimpleCredential(
-        readX509CertificateFile(certFile),
-        readPrivateKeyFile(keyFile));
+    return CredentialSupport.getSimpleCredential(
+        readX509CertificateFile(certFile), readPrivateKeyFile(keyFile));
   }
 
   /**
@@ -1568,7 +1539,7 @@ public final class OpenSamlUtil {
       throws IOException {
     String base64Cert = FileUtil.readPEMCertificateFile(file);
     try {
-      return SecurityHelper.buildJavaX509Cert(base64Cert);
+      return X509Support.decodeCertificate(base64Cert);
     } catch (CertificateException e) {
       throw new IOException(e);
     }
@@ -1584,7 +1555,7 @@ public final class OpenSamlUtil {
   public static PrivateKey readPrivateKeyFile(File file)
       throws IOException {
     try {
-      return SecurityHelper.decodePrivateKey(file, new char[0]);
+      return KeySupport.decodePrivateKey(file, new char[0]);
     } catch (KeyException e) {
       throw new IOException(e);
     }
@@ -1614,7 +1585,9 @@ public final class OpenSamlUtil {
    * @throws MarshallingException if unable to convert object.
    */
   public static Element marshallXmlObject(XMLObject xmlObject) throws MarshallingException {
-    return Configuration.getMarshallerFactory().getMarshaller(xmlObject).marshall(xmlObject);
+    return XMLObjectProviderRegistrySupport.getMarshallerFactory()
+        .getMarshaller(xmlObject)
+        .marshall(xmlObject);
   }
 
   /**
@@ -1625,7 +1598,9 @@ public final class OpenSamlUtil {
    * @throws UnmarshallingException if unable to convert object.
    */
   public static XMLObject unmarshallXmlObject(Element element) throws UnmarshallingException {
-    return Configuration.getUnmarshallerFactory().getUnmarshaller(element).unmarshall(element);
+    return XMLObjectProviderRegistrySupport.getUnmarshallerFactory()
+        .getUnmarshaller(element)
+        .unmarshall(element);
   }
 
   /**
@@ -1637,8 +1612,42 @@ public final class OpenSamlUtil {
   @Nonnull
   public static SAMLArtifactMap makeArtifactMap(@Nonnegative long artifactLifetime) {
     Preconditions.checkArgument(artifactLifetime >= 0);
-    return new BasicSAMLArtifactMap(
-        new MapBasedStorageService<String, SAMLArtifactMapEntry>(),
-        artifactLifetime);
+    BasicSAMLArtifactMap artifactMap = new BasicSAMLArtifactMap();
+    artifactMap.setArtifactLifetime(artifactLifetime);
+    try {
+      artifactMap.initialize();
+    } catch (ComponentInitializationException e) {
+      logger.severe("Failed to initialize artifact map: " + e.getMessage());
+      throw new RuntimeException(e);
+    }
+    return artifactMap;
+  }
+
+  /**
+   * Sets signature signing parameters on a message context
+   *
+   * @param context The {@link MessageContext} to set signing parameters on.
+   * @param credential The {@link Credential} to use for signing.
+   */
+  public static void initializeSigningParameters(
+      MessageContext<? extends SAMLObject> context, Credential credential) {
+    if (credential != null) {
+      SignatureSigningParameters signatureSigningParameters = new SignatureSigningParameters();
+      signatureSigningParameters.setSigningCredential(credential);
+      // TODO: Using SHA1 for maximum backward compatibility, SHA256 is preferred
+      signatureSigningParameters.setSignatureAlgorithm(
+          SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA1);
+      signatureSigningParameters.setSignatureReferenceDigestMethod(
+          SignatureConstants.ALGO_ID_DIGEST_SHA1);
+      signatureSigningParameters.setSignatureCanonicalizationAlgorithm(
+          SignatureConstants.ALGO_ID_C14N_EXCL_OMIT_COMMENTS);
+
+      X509KeyInfoGeneratorFactory keyInfoGeneratorFactory = new X509KeyInfoGeneratorFactory();
+      keyInfoGeneratorFactory.setEmitEntityCertificate(true);
+      signatureSigningParameters.setKeyInfoGenerator(keyInfoGeneratorFactory.newInstance());
+      context
+          .getSubcontext(SecurityParametersContext.class, true)
+          .setSignatureSigningParameters(signatureSigningParameters);
+    }
   }
 }

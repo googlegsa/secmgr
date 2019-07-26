@@ -15,13 +15,11 @@
 package com.google.enterprise.secmgr.saml;
 
 import com.google.enterprise.secmgr.common.XmlUtil;
-
-import org.opensaml.Configuration;
-import org.opensaml.common.SAMLObject;
-import org.opensaml.xml.io.MarshallingException;
-import org.w3c.dom.Element;
-
 import java.io.IOException;
+import org.opensaml.core.xml.config.XMLObjectProviderRegistrySupport;
+import org.opensaml.core.xml.io.MarshallingException;
+import org.opensaml.saml.common.SAMLObject;
+import org.w3c.dom.Element;
 
 /**
  * Utilities for logging SAML messages.
@@ -49,7 +47,8 @@ public class SamlLogUtil {
       throws IOException {
     Element element = null;
     try {
-      element = Configuration.getMarshallerFactory().getMarshaller(so).marshall(so);
+      element =
+          XMLObjectProviderRegistrySupport.getMarshallerFactory().getMarshaller(so).marshall(so);
     } catch (MarshallingException e) {
       return message + ": MarshallingException while marshalling " + so.toString() +
           ": " + e.getMessage();
